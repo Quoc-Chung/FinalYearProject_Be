@@ -74,5 +74,4 @@ public class Post {
 
   @Column(name="delete_at")
   private LocalDateTime deletedAt;
-
 }
