@@ -36,6 +36,7 @@ public class Address {
   private String addressLine;
 
   @Column(name = "is_default")
+  @Builder.Default
   private Boolean isDefault = false;
 
   @Column(name = "created_at", updatable = false)

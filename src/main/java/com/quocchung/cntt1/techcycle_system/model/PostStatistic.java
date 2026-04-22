@@ -39,17 +39,22 @@ public class PostStatistic {
   private LocalDate statDate;
 
   // Tổng số lượt xem ngày
+  @Builder.Default
   private Integer viewCount = 0;
 
   // Tổng tương tác
+  @Builder.Default
   private Integer interactionCount = 0;
 
   // Số người bấm lưu bài
+  @Builder.Default
   private Integer saveCount = 0;
 
   // Số lần chia sẻ
+  @Builder.Default
   private Integer shareCount = 0;
 
   // Số tin nhắn
+  @Builder.Default
   private Integer messageCount = 0;
 }

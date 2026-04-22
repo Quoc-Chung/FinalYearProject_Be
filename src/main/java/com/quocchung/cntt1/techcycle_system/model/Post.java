@@ -51,6 +51,7 @@ public class Post {
   private ConditionGrade conditionGrade;
 
   @Enumerated(EnumType.STRING)
+  @Builder.Default
   private PostStatus status = PostStatus.PENDING;
 
   @OneToOne

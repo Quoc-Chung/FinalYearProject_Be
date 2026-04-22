@@ -43,9 +43,11 @@ public class User {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
+  @Builder.Default
   private UserStatus status = UserStatus.ACTIVE;
 
   @Column(name = "trust_score")
+  @Builder.Default
   private Integer trustScore = 0;
 
   @Column(name = "last_login_at")

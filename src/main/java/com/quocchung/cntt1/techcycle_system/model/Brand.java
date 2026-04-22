@@ -35,5 +35,6 @@ public class Brand {
   private String logoUrl;
 
   @Column(name = "is_active")
+  @Builder.Default
   private Boolean isActive = true;
 }
