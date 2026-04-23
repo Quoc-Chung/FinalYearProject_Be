@@ -1,16 +1,7 @@
 spring:
   application:
-     name: techcycle-system
-  datasource:
-    url: jdbc:mysql://localhost:3306/techcycle-system?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: Ch@/12345678
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+    name: techcycle-system
+  profiles:
+    active: dev
 server:
   port: 8000
-
