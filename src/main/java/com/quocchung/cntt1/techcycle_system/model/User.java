@@ -38,7 +38,7 @@ public class User {
   @Column(name="bio")
   private String bio;
 
-  @Column(name = "avatar_url", length = 500)
+  @Column(name = "avatar_url", length = 5000)
   private String avatarUrl;
 
   @Enumerated(EnumType.STRING)
