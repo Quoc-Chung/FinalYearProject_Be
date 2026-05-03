@@ -7,15 +7,18 @@ import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
 import io.minio.BucketExistsArgs;
+import io.minio.GetBucketPolicyArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.SetBucketPolicyArgs;
 import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnBean(MinioClient.class)
+@Slf4j
 public class MinIoServiceImpl implements MinIoService {
 
   private static final long MAX_AVATAR_SIZE_BYTES = 5L * 1024 * 1024; // 5MB
@@ -51,8 +55,39 @@ public class MinIoServiceImpl implements MinIoService {
         minioClient.makeBucket(
             MakeBucketArgs.builder().bucket(minioProperties.getBucketName()).build());
       }
+      setBucketPolicyPublic();
     } catch (Exception ex) {
       throw new IllegalStateException("Cannot initialize MinIO bucket", ex);
+    }
+  }
+
+  @Override
+  public void setBucketPolicyPublic() {
+    try {
+      String bucketName = minioProperties.getBucketName();
+      String policyJson = """
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Action": ["s3:GetObject"],
+                "Resource": ["arn:aws:s3:::%s/*"]
+              }
+            ]
+          }
+          """.formatted(bucketName);
+
+      minioClient.setBucketPolicy(
+          SetBucketPolicyArgs.builder()
+              .bucket(bucketName)
+              .config(policyJson)
+              .build()
+      );
+      log.info("Bucket policy set to public for bucket: {}", bucketName);
+    } catch (Exception ex) {
+      log.warn("Cannot set bucket policy to public: {}", ex.getMessage());
     }
   }
 

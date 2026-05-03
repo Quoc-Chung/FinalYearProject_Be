@@ -2,6 +2,8 @@ package com.quocchung.cntt1.techcycle_system.controller;
 
 import static com.quocchung.cntt1.techcycle_system.constants.AppConstants.DEVICE_HEADER;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quocchung.cntt1.techcycle_system.config.AuthProperties;
 import com.quocchung.cntt1.techcycle_system.utils.properties.Oauth2Properties;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Auth.ChangePasswordRequest;
@@ -20,9 +22,12 @@ import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -46,6 +51,7 @@ public class AuthController {
   private final ResponseUtils responseUtils;
   private final CookieUtils cookieUtils;
   private final Oauth2Properties oauth2Properties;
+  private final ObjectMapper objectMapper;
 
   @PostMapping("/register")
   public ResponseEntity<APIResponse<RegisterResponse>> register(
@@ -182,8 +188,9 @@ public class AuthController {
     return request.getRemoteAddr();
   }
 
+
   @GetMapping("/social-login")
-  public ResponseEntity<String> socialAuth(
+  public ResponseEntity<APIResponse<String>> socialAuth(
       @RequestParam("login_type") String loginType,
       HttpServletRequest request) {
 
@@ -191,15 +198,37 @@ public class AuthController {
     String backendBaseUrl = resolveBackendBaseUrl(request);
     String url = authService.generateAuthUrl(loginType, backendBaseUrl);
 
-    return ResponseEntity.ok(url);
+    return ResponseEntity.ok(responseUtils.success(url));
   }
 
-  @GetMapping("/google/callback")
-  public ResponseEntity<APIResponse<AuthTokenResponse>> handleGoogleCallback(
-      @RequestParam("code") String code,
-      HttpServletRequest request,
-      @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
-  ) {
+//  @GetMapping("/google/callback")
+//  public ResponseEntity<APIResponse<AuthTokenResponse>> handleGoogleCallback(
+//      @RequestParam("code") String code,
+//      HttpServletRequest request,
+//      @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
+//  ) {
+//    String backendBaseUrl = resolveBackendBaseUrl(request);
+//    AuthSessionResponse session = authService.loginWithGoogle(code, deviceId, backendBaseUrl);
+//
+//    ResponseCookie refreshCookie = ResponseCookie.from(authProperties.getRefreshCookieName(),
+//            session.getRefreshToken())
+//        .httpOnly(true)
+//        .secure(authProperties.isRefreshCookieSecure())
+//        .sameSite(authProperties.getRefreshCookieSameSite())
+//        .path(authProperties.getRefreshCookiePath())
+//        .maxAge(Math.max(1L, jwtService.getRemainingMillis(session.getRefreshToken()) / 1000))
+//        .build();
+//    return ResponseEntity.ok()
+//        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+//        .body(responseUtils.success(session.getToken()));
+//  }
+@GetMapping("/google/callback")
+public ResponseEntity<Void> handleGoogleCallback(
+    @RequestParam("code") String code,
+    HttpServletRequest request,
+    @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
+) {
+  try {
     String backendBaseUrl = resolveBackendBaseUrl(request);
     AuthSessionResponse session = authService.loginWithGoogle(code, deviceId, backendBaseUrl);
 
@@ -211,37 +240,98 @@ public class AuthController {
         .path(authProperties.getRefreshCookiePath())
         .maxAge(Math.max(1L, jwtService.getRemainingMillis(session.getRefreshToken()) / 1000))
         .build();
-    return ResponseEntity.ok()
+
+    String accessToken = session.getToken().getAccessToken();
+    String userJson = URLEncoder.encode(
+        objectMapper.writeValueAsString(session.getToken().getUser()),
+        StandardCharsets.UTF_8
+    );
+
+    String redirectUrl = String.format(
+        "http://localhost:5173/auth/callback?accessToken=%s&user=%s",
+        accessToken, userJson
+    );
+
+    return ResponseEntity.status(HttpStatus.FOUND)
         .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-        .body(responseUtils.success(session.getToken()));
+        .header(HttpHeaders.LOCATION, redirectUrl)
+        .build();
+
+  } catch (JsonProcessingException e) {
+    return ResponseEntity.status(HttpStatus.FOUND)
+        .header(HttpHeaders.LOCATION, "http://localhost:5173/sign-in?error=social_login_failed")
+        .build();
   }
+}
+
+//  @GetMapping("/facebook/callback")
+//  public ResponseEntity<APIResponse<AuthTokenResponse>> handleFacebookCallback(
+//      @RequestParam("code") String code,
+//      HttpServletRequest request,
+//      @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
+//  ) {
+//    String backendBaseUrl = resolveBackendBaseUrl(request);
+//    String configuredRedirectUri = oauth2Properties.getFacebookRedirectUri();
+//    String resolvedRedirectUri = configuredRedirectUri != null
+//        && configuredRedirectUri.contains("{baseUrl}")
+//        ? configuredRedirectUri.replace("{baseUrl}", backendBaseUrl)
+//        : configuredRedirectUri;
+//
+//    AuthSessionResponse session = authService.loginWithFacebook(code, deviceId, backendBaseUrl);
+//    ResponseCookie refreshCookie = ResponseCookie.from(authProperties.getRefreshCookieName(),
+//            session.getRefreshToken())
+//        .httpOnly(true)
+//        .secure(authProperties.isRefreshCookieSecure())
+//        .sameSite(authProperties.getRefreshCookieSameSite())
+//        .path(authProperties.getRefreshCookiePath())
+//        .maxAge(Math.max(1L, jwtService.getRemainingMillis(session.getRefreshToken()) / 1000))
+//        .build();
+//    return ResponseEntity.ok()
+//        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+//        .body(responseUtils.success(session.getToken()));
+//  }
 
   @GetMapping("/facebook/callback")
-  public ResponseEntity<APIResponse<AuthTokenResponse>> handleFacebookCallback(
+  public ResponseEntity<Void> handleFacebookCallback(
       @RequestParam("code") String code,
       HttpServletRequest request,
       @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
   ) {
-    String backendBaseUrl = resolveBackendBaseUrl(request);
-    String configuredRedirectUri = oauth2Properties.getFacebookRedirectUri();
-    String resolvedRedirectUri = configuredRedirectUri != null
-        && configuredRedirectUri.contains("{baseUrl}")
-        ? configuredRedirectUri.replace("{baseUrl}", backendBaseUrl)
-        : configuredRedirectUri;
-    log.info("Facebook callback - backendBaseUrl: {}, resolvedRedirectUri: {}",
-        backendBaseUrl, resolvedRedirectUri);
-    AuthSessionResponse session = authService.loginWithFacebook(code, deviceId, backendBaseUrl);
-    ResponseCookie refreshCookie = ResponseCookie.from(authProperties.getRefreshCookieName(),
-            session.getRefreshToken())
-        .httpOnly(true)
-        .secure(authProperties.isRefreshCookieSecure())
-        .sameSite(authProperties.getRefreshCookieSameSite())
-        .path(authProperties.getRefreshCookiePath())
-        .maxAge(Math.max(1L, jwtService.getRemainingMillis(session.getRefreshToken()) / 1000))
-        .build();
-    return ResponseEntity.ok()
-        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-        .body(responseUtils.success(session.getToken()));
+    try {
+      String backendBaseUrl = resolveBackendBaseUrl(request);
+      AuthSessionResponse session = authService.loginWithFacebook(code, deviceId, backendBaseUrl);
+
+      ResponseCookie refreshCookie = ResponseCookie.from(
+              authProperties.getRefreshCookieName(),
+              session.getRefreshToken())
+          .httpOnly(true)
+          .secure(authProperties.isRefreshCookieSecure())
+          .sameSite(authProperties.getRefreshCookieSameSite())
+          .path(authProperties.getRefreshCookiePath())
+          .maxAge(Math.max(1L, jwtService.getRemainingMillis(session.getRefreshToken()) / 1000))
+          .build();
+
+      String accessToken = session.getToken().getAccessToken();
+      String userJson = URLEncoder.encode(
+          objectMapper.writeValueAsString(session.getToken().getUser()),
+          StandardCharsets.UTF_8
+      );
+
+      String redirectUrl = String.format(
+          "http://localhost:5173/auth/callback?accessToken=%s&user=%s",
+          accessToken, userJson
+      );
+
+      return ResponseEntity.status(HttpStatus.FOUND)
+          .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+          .header(HttpHeaders.LOCATION, redirectUrl)
+          .build();
+
+    } catch (JsonProcessingException e) {
+      return ResponseEntity.status(HttpStatus.FOUND)
+          .header(HttpHeaders.LOCATION, "http://localhost:5173/sign-in?error=social_login_failed")
+          .build();
+    }
   }
 
   /**
@@ -251,13 +341,11 @@ public class AuthController {
   private String resolveBackendBaseUrl(HttpServletRequest request) {
     String contextPath = request.getContextPath() == null ? "" : request.getContextPath();
 
-    // Check for forwarded headers (when behind reverse proxy/load balancer)
     String forwardedProto = request.getHeader("X-Forwarded-Proto");
     String forwardedHost = request.getHeader("X-Forwarded-Host");
     String forwardedPort = request.getHeader("X-Forwarded-Port");
 
     if (forwardedProto != null && forwardedHost != null) {
-      // Build URL from forwarded headers
       StringBuilder url = new StringBuilder();
       url.append(forwardedProto).append("://").append(forwardedHost);
       if (forwardedPort != null && !forwardedPort.isBlank()) {

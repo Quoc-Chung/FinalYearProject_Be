@@ -5,13 +5,16 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadRes
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
+import com.quocchung.cntt1.techcycle_system.model.Address;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserImage;
+import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserImageRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.Converter;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,7 @@ public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
   private final UserImageRepository userImageRepository;
+  private final AddressRepository addressRepository;
   private final MinIoService minioService;
   private final Converter converter;
 
@@ -34,6 +38,7 @@ public class UserServiceImpl implements UserService {
 
     updateBasicInfo(user, request);
     handleAvatar(user, request.getAvatar());
+    handleAddressId(user, request.getAddressId());
 
     User saved = userRepository.save(user);
     return converter.mapResponse(saved);
@@ -76,5 +81,27 @@ public class UserServiceImpl implements UserService {
     if (oldObjectKey != null && !oldObjectKey.equals(uploadResult.getObjectKey())) {
       minioService.deleteObjectSilently(oldObjectKey);
     }
+  }
+
+  private void handleAddressId(User user, Long addressId) {
+    if (addressId == null) {
+      return;
+    }
+
+    Address address = addressRepository.findById(addressId)
+        .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS, "Address not found"));
+
+    if (!address.getUserId().equals(user.getUserId())) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED, "Address does not belong to this user");
+    }
+
+    List<Address> userAddresses = addressRepository.findByUserId(user.getUserId());
+    userAddresses.forEach(addr -> {
+      addr.setIsDefault(false);
+      addressRepository.save(addr);
+    });
+
+    address.setIsDefault(true);
+    addressRepository.save(address);
   }
 }
