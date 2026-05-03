@@ -107,6 +107,7 @@ public class AuthServiceImpl implements AuthService {
         .fullName(request.getFullName())
         .status(UserStatus.ACTIVE)
         .createdAt(LocalDateTime.now())
+        .isFirstLogin(true)
         .build();
     user = userRepository.save(user);
     Role role = roleRepository.findByName(DEFAULT_ROLE_NAME)
@@ -146,7 +147,16 @@ public class AuthServiceImpl implements AuthService {
     if (user.getStatus() != UserStatus.ACTIVE) {
       throw new ResException(ResErrorCode.USER_NOT_ACTIVE);
     }
-    return issueSession(user, appNormalize.normalizeDeviceId(deviceId));
+    boolean isFirstLogin = user.getIsFirstLogin();
+    userRepository.markFirstLoginDone(user.getUserId());
+
+    if (isFirstLogin) {
+      user = userRepository.findByEmail(email)
+          .orElseThrow(() -> new ResException(ResErrorCode.UNAUTHORIZED));
+    }
+
+    AuthSessionResponse session = issueSession(user, appNormalize.normalizeDeviceId(deviceId));
+    return session;
   }
 
   /**
@@ -174,13 +184,11 @@ public class AuthServiceImpl implements AuthService {
       if (!redisTokenService.isRefreshTokenValid(userId, tokenDeviceId, tokenId)) {
         throw new ResException(ResErrorCode.UNAUTHORIZED);
       }
-
       User user = userRepository.findById(userId)
           .orElseThrow(() -> new ResException(ResErrorCode.UNAUTHORIZED));
       if (user.getStatus() != UserStatus.ACTIVE) {
         throw new ResException(ResErrorCode.USER_NOT_ACTIVE);
       }
-
       return issueSession(user, tokenDeviceId);
     } catch (ResException ex) {
       throw ex;
@@ -210,6 +218,7 @@ public class AuthServiceImpl implements AuthService {
           redisTokenService.deleteRefreshToken(userId, tokenDeviceId);
         }
       } catch (Exception ignored) {
+        throw new ResException(ResErrorCode.GENERAL_ERROR);
       }
     }
     if (accessToken != null && !accessToken.isBlank()) {
@@ -221,6 +230,7 @@ public class AuthServiceImpl implements AuthService {
               jwtService.getRemainingMillis(normalizedToken));
         }
       } catch (Exception ignored) {
+        throw new ResException(ResErrorCode.GENERAL_ERROR);
       }
     }
     return LogoutResponse.builder()
@@ -238,17 +248,14 @@ public class AuthServiceImpl implements AuthService {
     if (userOptional.isEmpty()) {
       return;
     }
-
     User user = userOptional.get();
     if (user.getStatus() != UserStatus.ACTIVE) {
       return;
     }
-
     String rawToken = generateSecureToken();
     String tokenHash = sha256(rawToken);
     String tokenKey = "password_reset:token:" + tokenHash;
     String userKey = "password_reset:user:" + user.getUserId();
-
     String oldTokenHash = redisTokenService.getValue(userKey);
     if (oldTokenHash != null && !oldTokenHash.isBlank()) {
       redisTokenService.delete("password_reset:token:" + oldTokenHash);
@@ -284,22 +291,19 @@ public class AuthServiceImpl implements AuthService {
       );
     }
     String tokenHash = sha256(request.getToken().trim());
-    String tokenKey = "password_reset:token:" +tokenHash;
+    String tokenKey = "password_reset:token:" + tokenHash;
     String userIdValue = redisTokenService.getValue(tokenKey);
-
     if (userIdValue == null || userIdValue.isBlank()) {
       throw new ResException(ResErrorCode.RESET_TOKEN_INVALID);
     }
-
     Long userId = Long.valueOf(userIdValue);
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new ResException(ResErrorCode.UNAUTHORIZED));
-
     user.setPassword(passwordEncoder.encode(request.getNewPassword()));
     userRepository.save(user);
 
     redisTokenService.delete(tokenKey);
-    redisTokenService.delete("password_reset:user:" +userId);
+    redisTokenService.delete("password_reset:user:" + userId);
   }
 
   @Override
@@ -397,7 +401,8 @@ public class AuthServiceImpl implements AuthService {
         resolveRedirectUri(oauth2Properties.getFacebookRedirectUri(), backendBaseUrl),
         code
     );
-    log.info("tes chung: " + resolveRedirectUri(oauth2Properties.getFacebookRedirectUri(), backendBaseUrl));
+    log.info("tes chung: " + resolveRedirectUri(oauth2Properties.getFacebookRedirectUri(),
+        backendBaseUrl));
     Map<String, Object> userInfo = fetchFacebookUserInfo(accessToken);
 
     String facebookId = safeValue(userInfo.get("id"));
@@ -546,7 +551,8 @@ public class AuthServiceImpl implements AuthService {
       boolean includeGrantType
   ) {
     if (code == null || code.isBlank()) {
-      throw new ResException(ResErrorCode.AUTH_CODE_REQUIRED, "code", "Authorization code is required");
+      throw new ResException(ResErrorCode.AUTH_CODE_REQUIRED, "code",
+          "Authorization code is required");
     }
     MultiValueMap<String, String> payload = new LinkedMultiValueMap<>();
     payload.add("client_id", clientId);
@@ -601,7 +607,8 @@ public class AuthServiceImpl implements AuthService {
                "&code=" + code.trim()
           )
           .retrieve()
-          .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+          .body(new ParameterizedTypeReference<Map<String, Object>>() {
+          });
 
       if (response == null) {
         throw new ResException(ResErrorCode.EMPTY_RESPONSE);
@@ -652,7 +659,9 @@ public class AuthServiceImpl implements AuthService {
       }
 
       com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-      Map<String, Object> userInfo = objectMapper.readValue(responseBody, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+      Map<String, Object> userInfo = objectMapper.readValue(responseBody,
+          new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+          });
 
       if (userInfo.containsKey("error")) {
         Object error = userInfo.get("error");
@@ -682,7 +691,8 @@ public class AuthServiceImpl implements AuthService {
     User user = userRepository.findByEmail(normalizedEmail)
         .orElseGet(() -> createSocialUser(normalizedEmail, fullName, avatarUrl));
 
-    if (avatarUrl != null && !avatarUrl.isBlank() && (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())) {
+    if (avatarUrl != null && !avatarUrl.isBlank() && (user.getAvatarUrl() == null
+                                                      || user.getAvatarUrl().isBlank())) {
       user.setAvatarUrl(avatarUrl);
       user = userRepository.save(user);
     }
@@ -709,6 +719,7 @@ public class AuthServiceImpl implements AuthService {
         .avatarUrl(avatarUrl)
         .status(UserStatus.ACTIVE)
         .createdAt(LocalDateTime.now())
+        .isFirstLogin(true)
         .build();
     newUser = userRepository.save(newUser);
     assignDefaultRole(newUser);
@@ -717,6 +728,7 @@ public class AuthServiceImpl implements AuthService {
 
   /**
    * Assign default role "user" when user login with google or facebook
+   *
    * @param user
    */
   private void assignDefaultRole(User user) {
@@ -726,8 +738,10 @@ public class AuthServiceImpl implements AuthService {
       userRoleRepository.save(UserRole.builder().user(user).role(role).build());
     }
   }
+
   /**
    * resolve displayname
+   *
    * @param fullName
    * @param email
    * @return
@@ -769,8 +783,10 @@ public class AuthServiceImpl implements AuthService {
     }
     return authorization.startsWith("Bearer ") ? authorization.substring(7) : authorization;
   }
+
   /**
    * generate token
+   *
    * @return
    */
   private String generateSecureToken() {
@@ -781,6 +797,7 @@ public class AuthServiceImpl implements AuthService {
 
   /**
    * encypt string param -> string hash (not decode)
+   *
    * @param value
    * @return
    */

@@ -41,6 +41,10 @@ public class User {
   @Column(name = "avatar_url", length = 5000)
   private String avatarUrl;
 
+  @Builder.Default
+  @Column(name = "is_first_login", nullable = false)
+  private Boolean isFirstLogin = true;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   @Builder.Default

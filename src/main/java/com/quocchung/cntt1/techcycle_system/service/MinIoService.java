@@ -14,4 +14,6 @@ public interface MinIoService {
   StorageUploadResponse uploadCategoryIcon(MultipartFile file, Long categoryId);
 
   void deleteObjectSilently(String objectKey);
+
+  void setBucketPolicyPublic();
 }

@@ -23,17 +23,17 @@ public class Address {
   @Column(name = "user_id")
   private Long userId;
 
-  @Column(nullable = false, length = 100)
+  @Column(nullable = false, length = 255)
   private String province;
-
-  @Column(nullable = false, length = 100)
-  private String district;
 
   @Column(length = 100)
   private String ward;
 
-  @Column(name = "address_line", length = 255)
-  private String addressLine;
+  @Column(nullable = false, length = 1000)
+  private String addressDetail; // đường nào, số nhà bao nhiêu
+
+  @Column(name = "address_line", length = 5000)
+  private String addressLine; // province - ward - addressDetail
 
   @Column(name = "is_default")
   @Builder.Default

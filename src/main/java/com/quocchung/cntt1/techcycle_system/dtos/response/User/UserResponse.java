@@ -18,8 +18,11 @@ public class UserResponse {
   private String bio;
   private String avatarUrl;
   private String status;
+  private Boolean isFirstLogin;
   @Builder.Default
   private Integer trustScore = 0;
+  private String addressLine;
+  private Long defaultAddressId;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
   private LocalDateTime deletedAt;
