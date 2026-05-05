@@ -34,7 +34,9 @@ public enum ResErrorCode {
   SOCIAL_USER_INFO_FETCH_FAILED(HttpStatus.UNAUTHORIZED, "401", "auth.social.user.info.fetch.failed"),
   SOCIAL_ACCOUNT_NO_EMAIL(HttpStatus.BAD_REQUEST, "400", "auth.social.account.no.email"),
   EMPTY_RESPONSE(HttpStatus.UNAUTHORIZED, "401", "auth.empty.response"),
-  FORGOT_PASSWORD_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "429", "auth.forgot.password.rate.limit");
+  FORGOT_PASSWORD_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "429", "auth.forgot.password.rate.limit"),
+  EMAIL_NOT_EXISTS(HttpStatus.NOT_FOUND, "404", "auth.email.not.exists"),
+  PASSWORD_INCORRECT(HttpStatus.BAD_REQUEST, "400", "auth.password.incorrect");
 
   private final HttpStatus status;
   private final String code;
