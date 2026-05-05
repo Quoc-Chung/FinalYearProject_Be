@@ -1,6 +1,7 @@
 package com.quocchung.cntt1.techcycle_system.dtos.response.User;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,4 +27,5 @@ public class UserResponse {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
   private LocalDateTime deletedAt;
+  private List<String> roleNames;
 }
