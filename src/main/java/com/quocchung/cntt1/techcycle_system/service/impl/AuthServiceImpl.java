@@ -135,26 +135,23 @@ public class AuthServiceImpl implements AuthService {
   @Transactional
   public AuthSessionResponse login(LoginRequest request, String deviceId) {
     String email = request.getEmail().trim().toLowerCase();
+
+    if (!userRepository.existsByEmail(email)) {
+      throw new ResException(ResErrorCode.EMAIL_NOT_EXISTS, "email", "Tài khoản không tồn tại");
+    }
+
     try {
       authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(email, request.getPassword())
       );
     } catch (AuthenticationException ex) {
-      throw new ResException(ResErrorCode.UNAUTHORIZED);
+      throw new ResException(ResErrorCode.PASSWORD_INCORRECT, "password", "Mật khẩu không đúng");
     }
     User user = userRepository.findByEmail(email)
         .orElseThrow(() -> new ResException(ResErrorCode.UNAUTHORIZED));
     if (user.getStatus() != UserStatus.ACTIVE) {
       throw new ResException(ResErrorCode.USER_NOT_ACTIVE);
     }
-    boolean isFirstLogin = user.getIsFirstLogin();
-    userRepository.markFirstLoginDone(user.getUserId());
-
-    if (isFirstLogin) {
-      user = userRepository.findByEmail(email)
-          .orElseThrow(() -> new ResException(ResErrorCode.UNAUTHORIZED));
-    }
-
     AuthSessionResponse session = issueSession(user, appNormalize.normalizeDeviceId(deviceId));
     return session;
   }
@@ -209,10 +206,12 @@ public class AuthServiceImpl implements AuthService {
   @Override
   @Transactional
   public LogoutResponse logout(String accessToken, String refreshToken, String deviceId) {
+    Long userId = null;
+
     if (refreshToken != null && !refreshToken.isBlank()) {
       try {
         if (jwtService.isRefreshToken(refreshToken)) {
-          Long userId = jwtService.getUserId(refreshToken);
+          userId = jwtService.getUserId(refreshToken);
           String tokenDeviceId = appNormalize.normalizeDeviceId(
               jwtService.getDeviceId(refreshToken), deviceId);
           redisTokenService.deleteRefreshToken(userId, tokenDeviceId);
@@ -221,11 +220,15 @@ public class AuthServiceImpl implements AuthService {
         throw new ResException(ResErrorCode.GENERAL_ERROR);
       }
     }
+
     if (accessToken != null && !accessToken.isBlank()) {
       String normalizedToken =
           accessToken.startsWith("Bearer ") ? accessToken.substring(7) : accessToken;
       try {
         if (jwtService.isAccessToken(normalizedToken)) {
+          if (userId == null) {
+            userId = jwtService.getUserId(normalizedToken);
+          }
           redisTokenService.blacklistAccessToken(normalizedToken,
               jwtService.getRemainingMillis(normalizedToken));
         }
@@ -233,6 +236,14 @@ public class AuthServiceImpl implements AuthService {
         throw new ResException(ResErrorCode.GENERAL_ERROR);
       }
     }
+
+    if (userId != null) {
+      userRepository.findById(userId).ifPresent(user -> {
+        user.setIsFirstLogin(false);
+        userRepository.save(user);
+      });
+    }
+
     return LogoutResponse.builder()
         .message("Logged out successfully")
         .build();
