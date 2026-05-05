@@ -5,6 +5,7 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.model.Address;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserRoleRepository;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class Converter {
 
   private final AddressRepository addressRepository;
+  private final UserRoleRepository userRoleRepository;
 
   public UserResponse mapToUserResponse(User user) {
     return mapResponse(user);
@@ -32,7 +34,8 @@ public class Converter {
         .trustScore(user.getTrustScore())
         .createdAt(user.getCreatedAt())
         .updatedAt(user.getUpdatedAt())
-        .deletedAt(user.getDeletedAt());
+        .deletedAt(user.getDeletedAt())
+        .roleNames(userRoleRepository.findRoleNamesByUserId(user.getUserId()));
 
     Optional<Address> defaultAddress = addressRepository.findFirstByUserIdAndIsDefaultTrue(user.getUserId());
     defaultAddress.ifPresent(addr -> {
