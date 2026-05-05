@@ -1,10 +1,14 @@
 package com.quocchung.cntt1.techcycle_system.service.impl;
 
+import com.quocchung.cntt1.techcycle_system.dtos.request.User.UpdateUserStatusRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserSearchRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserSearchResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
+import com.quocchung.cntt1.techcycle_system.mapper.UserMapper;
 import com.quocchung.cntt1.techcycle_system.model.Address;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserImage;
@@ -14,6 +18,7 @@ import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.Converter;
+import com.quocchung.cntt1.techcycle_system.utils.enums.UserStatus;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +34,7 @@ public class UserServiceImpl implements UserService {
   private final AddressRepository addressRepository;
   private final MinIoService minioService;
   private final Converter converter;
+  private final UserMapper userMapper;
 
   @Override
   @Transactional
@@ -103,5 +109,53 @@ public class UserServiceImpl implements UserService {
 
     address.setIsDefault(true);
     addressRepository.save(address);
+  }
+
+  @Override
+  @Transactional
+  public void updateUserStatus(Long userId, UpdateUserStatusRequest request) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS, "User not found"));
+
+    UserStatus newStatus;
+    try {
+      newStatus = UserStatus.valueOf(request.getStatus().toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new ResException(ResErrorCode.INVALID_REQUEST, "Invalid status value: " + request.getStatus());
+    }
+
+    user.setStatus(newStatus);
+
+    // Set reason khi ban/unban user
+    if (request.getReason() != null && !request.getReason().isBlank()) {
+      user.setBannedReason(request.getReason().trim());
+    } else {
+      user.setBannedReason(null);
+    }
+
+    userRepository.save(user);
+  }
+
+
+  @Override
+  public UserSearchResponse searchUsers(UserSearchRequest request) {
+    int page = request.getPage() != null && request.getPage() > 0 ? request.getPage() : 1;
+    int size = request.getSize() != null && request.getSize() > 0 ? request.getSize() : 10;
+    int offset = (page - 1) * size;
+
+    List<UserResponse> users = userMapper.searchUsers(
+        request.getSearchText(),
+        request.getStatus(),
+        offset,
+        size
+    );
+    Long totalElements = userMapper.countSearchUsers(
+        request.getSearchText(),
+        request.getStatus()
+    );
+    return UserSearchResponse.builder()
+        .users(users)
+        .totalElements(totalElements)
+        .build();
   }
 }

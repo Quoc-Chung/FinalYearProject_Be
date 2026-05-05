@@ -25,6 +25,8 @@ public enum ResErrorCode {
   PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "400", "auth.password.mismatch"),
   DEFAULT_ROLE_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "500", "auth.default.role.missing"),
   USER_NOT_ACTIVE(HttpStatus.FORBIDDEN, "403", "auth.user.not.active"),
+  USER_BANNED(HttpStatus.FORBIDDEN, "403", "auth.user.banned"),
+  USER_DELETED(HttpStatus.FORBIDDEN, "403", "auth.user.deleted"),
   RESET_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "400", "auth.reset.token.invalid"),
   CURRENT_PASSWORD_INCORRECT(HttpStatus.BAD_REQUEST, "400", "auth.current.password.incorrect"),
   NEW_PASSWORD_MUST_DIFFER(HttpStatus.BAD_REQUEST, "400", "auth.new.password.must.differ"),
@@ -36,7 +38,8 @@ public enum ResErrorCode {
   EMPTY_RESPONSE(HttpStatus.UNAUTHORIZED, "401", "auth.empty.response"),
   FORGOT_PASSWORD_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "429", "auth.forgot.password.rate.limit"),
   EMAIL_NOT_EXISTS(HttpStatus.NOT_FOUND, "404", "auth.email.not.exists"),
-  PASSWORD_INCORRECT(HttpStatus.BAD_REQUEST, "400", "auth.password.incorrect");
+  PASSWORD_INCORRECT(HttpStatus.BAD_REQUEST, "400", "auth.password.incorrect"),
+  INVALID_REQUEST(HttpStatus.BAD_REQUEST, "400", "invalid.request");
 
   private final HttpStatus status;
   private final String code;

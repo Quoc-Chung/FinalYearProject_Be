@@ -54,6 +54,9 @@ public class User {
   @Builder.Default
   private Integer trustScore = 0;
 
+  @Column(name = "banned_reason", length = 500)
+  private String bannedReason;
+
   @Column(name = "last_login_at")
   private LocalDateTime lastLoginAt;
 
