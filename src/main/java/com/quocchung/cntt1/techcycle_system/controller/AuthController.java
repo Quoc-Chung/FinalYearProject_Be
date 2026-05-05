@@ -50,7 +50,6 @@ public class AuthController {
   private final JwtService jwtService;
   private final ResponseUtils responseUtils;
   private final CookieUtils cookieUtils;
-  private final Oauth2Properties oauth2Properties;
   private final ObjectMapper objectMapper;
 
   @PostMapping("/register")
@@ -171,11 +170,7 @@ public class AuthController {
     return ResponseEntity.ok(responseUtils.success("Password changed"));
   }
 
-  /**
-   * Hàm trả về API của người đăng nhập
-   * @param request
-   * @return
-   */
+
   private String resolveClientIp(HttpServletRequest request) {
     String forwarded = request.getHeader("X-Forwarded-For");
     if (forwarded != null && !forwarded.isBlank()) {
@@ -201,27 +196,7 @@ public class AuthController {
     return ResponseEntity.ok(responseUtils.success(url));
   }
 
-//  @GetMapping("/google/callback")
-//  public ResponseEntity<APIResponse<AuthTokenResponse>> handleGoogleCallback(
-//      @RequestParam("code") String code,
-//      HttpServletRequest request,
-//      @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
-//  ) {
-//    String backendBaseUrl = resolveBackendBaseUrl(request);
-//    AuthSessionResponse session = authService.loginWithGoogle(code, deviceId, backendBaseUrl);
-//
-//    ResponseCookie refreshCookie = ResponseCookie.from(authProperties.getRefreshCookieName(),
-//            session.getRefreshToken())
-//        .httpOnly(true)
-//        .secure(authProperties.isRefreshCookieSecure())
-//        .sameSite(authProperties.getRefreshCookieSameSite())
-//        .path(authProperties.getRefreshCookiePath())
-//        .maxAge(Math.max(1L, jwtService.getRemainingMillis(session.getRefreshToken()) / 1000))
-//        .build();
-//    return ResponseEntity.ok()
-//        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-//        .body(responseUtils.success(session.getToken()));
-//  }
+
 @GetMapping("/google/callback")
 public ResponseEntity<Void> handleGoogleCallback(
     @RequestParam("code") String code,
@@ -263,33 +238,6 @@ public ResponseEntity<Void> handleGoogleCallback(
         .build();
   }
 }
-
-//  @GetMapping("/facebook/callback")
-//  public ResponseEntity<APIResponse<AuthTokenResponse>> handleFacebookCallback(
-//      @RequestParam("code") String code,
-//      HttpServletRequest request,
-//      @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
-//  ) {
-//    String backendBaseUrl = resolveBackendBaseUrl(request);
-//    String configuredRedirectUri = oauth2Properties.getFacebookRedirectUri();
-//    String resolvedRedirectUri = configuredRedirectUri != null
-//        && configuredRedirectUri.contains("{baseUrl}")
-//        ? configuredRedirectUri.replace("{baseUrl}", backendBaseUrl)
-//        : configuredRedirectUri;
-//
-//    AuthSessionResponse session = authService.loginWithFacebook(code, deviceId, backendBaseUrl);
-//    ResponseCookie refreshCookie = ResponseCookie.from(authProperties.getRefreshCookieName(),
-//            session.getRefreshToken())
-//        .httpOnly(true)
-//        .secure(authProperties.isRefreshCookieSecure())
-//        .sameSite(authProperties.getRefreshCookieSameSite())
-//        .path(authProperties.getRefreshCookiePath())
-//        .maxAge(Math.max(1L, jwtService.getRemainingMillis(session.getRefreshToken()) / 1000))
-//        .build();
-//    return ResponseEntity.ok()
-//        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-//        .body(responseUtils.success(session.getToken()));
-//  }
 
   @GetMapping("/facebook/callback")
   public ResponseEntity<Void> handleFacebookCallback(

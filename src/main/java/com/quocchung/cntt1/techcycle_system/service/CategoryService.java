@@ -16,4 +16,8 @@ public interface CategoryService {
   List<CategoryResponse> getAllData(String searchText);
 
   List<CategoryTreeResponse> getAllTreeData(String searchText);
+
+  List<CategoryResponse> getRootCategories();
+
+  List<CategoryResponse> getRootCategoriesActive();
 }

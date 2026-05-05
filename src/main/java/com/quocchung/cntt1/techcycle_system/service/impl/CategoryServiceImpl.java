@@ -111,6 +111,20 @@ public class CategoryServiceImpl implements CategoryService {
     );
     return buildTree(flatList);
   }
+
+  @Override
+  public List<CategoryResponse> getRootCategories() {
+    Sort sort = Sort.by(Sort.Direction.ASC, "name");
+    List<Category> categories = categoryRepository.findByParentIsNull(sort);
+    return categories.stream().map(this::mapResponse).toList();
+  }
+
+  @Override
+  public List<CategoryResponse> getRootCategoriesActive() {
+    Sort sort = Sort.by(Sort.Direction.ASC, "name");
+    List<Category> categories = categoryRepository.findByParentIsNullAndIsActiveTrue(sort);
+    return categories.stream().map(this::mapResponse).toList();
+  }
   private List<CategoryTreeResponse> buildTree(List<CategoryTreeResponse> flatList) {
     // Map theo categoryId để lookup nhanh
     Map<Long, CategoryTreeResponse> map = flatList.stream()

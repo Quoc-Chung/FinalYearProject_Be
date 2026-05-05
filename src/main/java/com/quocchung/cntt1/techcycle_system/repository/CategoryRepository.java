@@ -9,4 +9,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
   List<Category> findByNameContainingIgnoreCase(String keyword, Sort sort);
+
+  List<Category> findByParentIsNull(Sort sort);
+
+  List<Category> findByParentIsNullAndIsActiveTrue(Sort sort);
 }

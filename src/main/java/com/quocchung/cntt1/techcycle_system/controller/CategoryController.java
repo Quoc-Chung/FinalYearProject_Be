@@ -33,6 +33,7 @@ public class CategoryController {
       @RequestParam(name = "searchText", required = false) String searchText) {
     return ResponseEntity.ok(responseUtils.successList(categoryService.getAllData(searchText)));
   }
+  
 
   @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<APIResponse<CategoryResponse>> create(
@@ -65,5 +66,15 @@ public class CategoryController {
   public ResponseEntity<APIResponse<CategoryTreeResponse>> getAllTreeData(
       @RequestParam(name = "searchText", required = false) String searchText) {
     return ResponseEntity.ok(responseUtils.successList(categoryService.getAllTreeData(searchText)));
+  }
+
+  @GetMapping("/root")
+  public ResponseEntity<APIResponse<CategoryResponse>> getRootCategories() {
+    return ResponseEntity.ok(responseUtils.successList(categoryService.getRootCategories()));
+  }
+
+  @GetMapping("/root/active")
+  public ResponseEntity<APIResponse<CategoryResponse>> getRootCategoriesActive() {
+    return ResponseEntity.ok(responseUtils.successList(categoryService.getRootCategoriesActive()));
   }
 }

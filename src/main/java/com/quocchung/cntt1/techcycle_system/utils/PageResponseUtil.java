@@ -101,4 +101,36 @@ public class PageResponseUtil {
     pageResponse.setTotalElements(page.getTotalElements());
     return pageResponse;
   }
+
+  /**
+   * Build PageResponse từ thông số pagination
+   * @param currentPage trang hiện tại (1-based)
+   * @param pageSize kích thước trang
+   * @param currentElements số phần tử trong trang hiện tại
+   * @param totalElements tổng số phần tử
+   * @return PageResponse
+   */
+  public static PageResponse buildPageMetadata(long currentPage, long pageSize, long currentElements, long totalElements) {
+    int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+    if (totalPages == 0) totalPages = 1;
+
+    PageResponse pageResponse = new PageResponse();
+    pageResponse.setTotalPages(totalPages);
+    pageResponse.setHasNext(currentPage < totalPages);
+    pageResponse.setHasPrevious(currentPage > 1);
+    pageResponse.setCurrentPage((int) currentPage);
+    pageResponse.setTotalElements(totalElements);
+    return pageResponse;
+  }
+
+  /**
+   * Build PageResponse với giả định totalElements từ currentElements và page info
+   * @param currentPage trang hiện tại (1-based)
+   * @param pageSize kích thước trang
+   * @param currentElements số phần tử trong trang hiện tại
+   * @return PageResponse
+   */
+  public static PageResponse buildPageMetadata(long currentPage, long pageSize, long currentElements) {
+    return buildPageMetadata(currentPage, pageSize, currentElements, currentElements);
+  }
 }

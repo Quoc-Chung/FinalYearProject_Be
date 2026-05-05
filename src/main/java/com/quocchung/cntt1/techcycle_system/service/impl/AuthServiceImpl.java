@@ -149,8 +149,12 @@ public class AuthServiceImpl implements AuthService {
     }
     User user = userRepository.findByEmail(email)
         .orElseThrow(() -> new ResException(ResErrorCode.UNAUTHORIZED));
-    if (user.getStatus() != UserStatus.ACTIVE) {
-      throw new ResException(ResErrorCode.USER_NOT_ACTIVE);
+
+    switch (user.getStatus()) {
+      case INACTIVE -> throw new ResException(ResErrorCode.USER_NOT_ACTIVE, "Tài khoản chưa được kích hoạt");
+      case BANNED -> throw new ResException(ResErrorCode.USER_BANNED, "Tài khoản đã bị khóa");
+      case DELETED -> throw new ResException(ResErrorCode.USER_DELETED, "Tài khoản đã bị xóa");
+      case ACTIVE -> {} // Cho phép đăng nhập
     }
     AuthSessionResponse session = issueSession(user, appNormalize.normalizeDeviceId(deviceId));
     return session;
