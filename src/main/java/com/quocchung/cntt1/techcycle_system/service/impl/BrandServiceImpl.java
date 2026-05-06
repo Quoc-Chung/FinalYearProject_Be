@@ -13,6 +13,8 @@ import com.quocchung.cntt1.techcycle_system.service.BrandService;
 import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,6 +84,12 @@ public class BrandServiceImpl implements BrandService {
         : brandRepository.findByNameContainingIgnoreCaseOrCategory_NameContainingIgnoreCase(
             searchText.trim(), searchText.trim(), sort);
     return brands.stream().map(this::mapResponse).toList();
+  }
+
+  @Override
+  public Page<BrandResponse> getAllData(String searchText, Pageable pageable) {
+    Page<Brand> brandPage = brandRepository.findBySearchText(searchText, pageable);
+    return brandPage.map(this::mapResponse);
   }
 
   private BrandResponse mapResponse(Brand brand) {

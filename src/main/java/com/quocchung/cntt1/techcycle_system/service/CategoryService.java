@@ -4,6 +4,8 @@ import com.quocchung.cntt1.techcycle_system.dtos.request.Category.CreateCategory
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryTreeResponse;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface CategoryService {
@@ -14,6 +16,8 @@ public interface CategoryService {
   void delete(Long categoryId);
 
   List<CategoryResponse> getAllData(String searchText);
+
+  Page<CategoryResponse> getAllData(String searchText, Pageable pageable);
 
   List<CategoryTreeResponse> getAllTreeData(String searchText);
 

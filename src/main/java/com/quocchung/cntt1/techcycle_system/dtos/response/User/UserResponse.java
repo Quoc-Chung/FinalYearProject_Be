@@ -28,4 +28,5 @@ public class UserResponse {
   private LocalDateTime updatedAt;
   private LocalDateTime deletedAt;
   private List<String> roleNames;
+  private String bannedReason;
 }

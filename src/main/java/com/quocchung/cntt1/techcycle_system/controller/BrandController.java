@@ -3,10 +3,15 @@ package com.quocchung.cntt1.techcycle_system.controller;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Brand.CreateBrandRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Brand.BrandResponse;
 import com.quocchung.cntt1.techcycle_system.service.BrandService;
+import com.quocchung.cntt1.techcycle_system.utils.PageResponseUtil;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
+import com.quocchung.cntt1.techcycle_system.utils.response.PageResponse;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,8 +34,22 @@ public class BrandController {
 
   @GetMapping("/getAllData")
   public ResponseEntity<APIResponse<BrandResponse>> getAllData(
-      @RequestParam(name = "searchText", required = false) String searchText) {
-    return ResponseEntity.ok(responseUtils.successList(brandService.getAllData(searchText)));
+      @RequestParam(name = "searchText", required = false) String searchText,
+      @RequestParam(defaultValue = "1") Integer page,
+      @RequestParam(defaultValue = "10") Integer size
+  ) {
+    PageRequest pageable = PageRequest.of(page - 1, size);
+    Page<BrandResponse> brandPage = brandService.getAllData(searchText, pageable);
+    PageResponse pageInfo = PageResponseUtil.extractPageMetadata(brandPage);
+    return ResponseEntity.ok(responseUtils.successPage(brandPage.getContent(), pageInfo));
+  }
+
+  @GetMapping("/get-all-brand")
+  public ResponseEntity<APIResponse<List<BrandResponse>>> getAllData(
+      @RequestParam(name = "searchText", required = false) String searchText
+  ){
+    List<BrandResponse> allBrand = brandService.getAllData(searchText);
+    return ResponseEntity.ok(responseUtils.success(allBrand));
   }
 
   @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

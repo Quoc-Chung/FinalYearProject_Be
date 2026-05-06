@@ -4,10 +4,14 @@ import com.quocchung.cntt1.techcycle_system.dtos.request.Category.CreateCategory
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryTreeResponse;
 import com.quocchung.cntt1.techcycle_system.service.CategoryService;
+import com.quocchung.cntt1.techcycle_system.utils.PageResponseUtil;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
+import com.quocchung.cntt1.techcycle_system.utils.response.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,8 +34,14 @@ public class CategoryController {
 
   @GetMapping("/getAllData")
   public ResponseEntity<APIResponse<CategoryResponse>> getAllData(
-      @RequestParam(name = "searchText", required = false) String searchText) {
-    return ResponseEntity.ok(responseUtils.successList(categoryService.getAllData(searchText)));
+      @RequestParam(name = "searchText", required = false) String searchText,
+      @RequestParam(defaultValue = "1") Integer page,
+      @RequestParam(defaultValue = "10") Integer size
+  ) {
+    PageRequest pageable = PageRequest.of(page - 1, size);
+    Page<CategoryResponse> categoryPage = categoryService.getAllData(searchText, pageable);
+    PageResponse pageInfo = PageResponseUtil.extractPageMetadata(categoryPage);
+    return ResponseEntity.ok(responseUtils.successPage(categoryPage.getContent(), pageInfo));
   }
   
 

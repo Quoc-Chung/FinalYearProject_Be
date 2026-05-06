@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,6 +84,12 @@ public class CategoryServiceImpl implements CategoryService {
         ? categoryRepository.findAll(sort)
         : categoryRepository.findByNameContainingIgnoreCase(searchText.trim(), sort);
     return categories.stream().map(this::mapResponse).toList();
+  }
+
+  @Override
+  public Page<CategoryResponse> getAllData(String searchText, Pageable pageable) {
+    Page<Category> categoryPage = categoryRepository.findBySearchText(searchText, pageable);
+    return categoryPage.map(this::mapResponse);
   }
 
   private Category resolveParent(Long parentId) {
