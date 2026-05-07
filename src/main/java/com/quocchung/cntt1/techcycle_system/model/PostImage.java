@@ -49,6 +49,7 @@ public class PostImage {
 
   // chỉ video
   private Double duration;
+  // Luu trữ đường dẫn cho ảnh đại diện
   private String thumbnailKey;
 
   private Integer sortOrder;

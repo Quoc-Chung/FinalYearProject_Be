@@ -1,5 +1,6 @@
 package com.quocchung.cntt1.techcycle_system.service;
 
+import com.quocchung.cntt1.techcycle_system.dtos.request.Post.PresignedUrlResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadResponse;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,4 +17,6 @@ public interface MinIoService {
   void deleteObjectSilently(String objectKey);
 
   void setBucketPolicyPublic();
+
+  PresignedUrlResponse generatePresignedPutUrl(String objectKey, String mimeType);
 }

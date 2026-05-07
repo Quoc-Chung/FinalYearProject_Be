@@ -18,7 +18,6 @@ import org.hibernate.annotations.CreationTimestamp;
 @AllArgsConstructor
 @Builder
 public class PostReport {
-
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "report_id", updatable = false, nullable = false)

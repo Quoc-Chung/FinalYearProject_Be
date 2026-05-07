@@ -5,6 +5,7 @@ import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.*;
 
 @Entity
@@ -54,8 +55,8 @@ public class Post {
   @Builder.Default
   private PostStatus status = PostStatus.PENDING;
 
-  @OneToOne
-  @JoinColumn(name="address_id")
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "address_id")
   private Address address;
 
   @Column(name = "approved_by")
@@ -75,4 +76,16 @@ public class Post {
 
   @Column(name="delete_at")
   private LocalDateTime deletedAt;
+
+  @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  private List<PostImage> images = new java.util.ArrayList<>();
+
+  @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  private List<PostAttribute> attributes = new java.util.ArrayList<>();
+
+  @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  private List<PostTag> postTags = new java.util.ArrayList<>();
 }
