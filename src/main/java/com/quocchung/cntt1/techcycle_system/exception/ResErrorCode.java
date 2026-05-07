@@ -39,7 +39,14 @@ public enum ResErrorCode {
   FORGOT_PASSWORD_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "429", "auth.forgot.password.rate.limit"),
   EMAIL_NOT_EXISTS(HttpStatus.NOT_FOUND, "404", "auth.email.not.exists"),
   PASSWORD_INCORRECT(HttpStatus.BAD_REQUEST, "400", "auth.password.incorrect"),
-  INVALID_REQUEST(HttpStatus.BAD_REQUEST, "400", "invalid.request");
+  INVALID_REQUEST(HttpStatus.BAD_REQUEST, "400", "invalid.request"),
+
+  POST_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "post.not.found"),
+  POST_ALREADY_APPROVED(HttpStatus.CONFLICT, "409", "post.already.approved"),
+  POST_ALREADY_REJECTED(HttpStatus.CONFLICT, "409", "post.already.rejected"),
+  CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "category.not.found"),
+  BRAND_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "brand.not.found"),
+  USER_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "user.not.found");
 
   private final HttpStatus status;
   private final String code;

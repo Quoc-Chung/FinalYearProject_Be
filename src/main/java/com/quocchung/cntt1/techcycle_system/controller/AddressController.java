@@ -6,6 +6,7 @@ import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
+import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.AddressService;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
@@ -14,6 +15,7 @@ import java.security.Principal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,10 +35,10 @@ public class AddressController {
 
   @PostMapping("/add")
   public ResponseEntity<APIResponse<AddressResponse>> createAddress(
-      Principal principal,
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
       @Valid @ModelAttribute CreateAddressRequest request
   ) {
-    Long userId = getUserIdFromPrincipal(principal);
+    Long userId =  userPrincipal.getUserId();
     AddressResponse response = addressService.createAddress(userId, request);
     return ResponseEntity.ok(responseUtils.success(response));
   }
@@ -49,20 +51,11 @@ public class AddressController {
   }
   @PutMapping("/set-default/{addressId}")
   public ResponseEntity<APIResponse<AddressResponse>> setDefaultAddress(
-      Principal principal,
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
       @PathVariable Long addressId
   ) {
-    Long userId = getUserIdFromPrincipal(principal);
+    Long userId =  userPrincipal.getUserId();
     AddressResponse response = addressService.setDefaultAddress(userId, addressId);
     return ResponseEntity.ok(responseUtils.success(response));
-  }
-
-  private Long getUserIdFromPrincipal(Principal principal) {
-    if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
-      throw new ResException(ResErrorCode.UNAUTHORIZED);
-    }
-    User user = userRepository.findByEmail(principal.getName())
-        .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS, "User not found"));
-    return user.getUserId();
   }
 }

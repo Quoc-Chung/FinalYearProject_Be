@@ -1,6 +1,7 @@
 package com.quocchung.cntt1.techcycle_system.service.impl;
 
 import com.quocchung.cntt1.techcycle_system.config.MinioProperties;
+import com.quocchung.cntt1.techcycle_system.dtos.request.Post.PresignedUrlResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
@@ -8,15 +9,19 @@ import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
 import io.minio.BucketExistsArgs;
 import io.minio.GetBucketPolicyArgs;
+import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.SetBucketPolicyArgs;
+import io.minio.http.Method;
 import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +42,11 @@ public class MinIoServiceImpl implements MinIoService {
       "image/png", "image/webp");
   private static final Set<String> ALLOWED_POST_VIDEO_CONTENT_TYPES = Set.of("video/mp4",
       "video/webm", "video/quicktime");
+
+  private static final Set<String> ALLOWED_PRESIGNED_MIME_TYPES = Set.of(
+      "image/jpeg", "image/png", "image/webp",
+      "video/mp4", "video/webm", "video/quicktime"
+  );
 
   private final MinioClient minioClient;
   private final MinioProperties minioProperties;
@@ -90,6 +100,7 @@ public class MinIoServiceImpl implements MinIoService {
       log.warn("Cannot set bucket policy to public: {}", ex.getMessage());
     }
   }
+
 
   @Override
   public StorageUploadResponse uploadUserAvatar(MultipartFile file, Long userId) {
@@ -253,5 +264,37 @@ public class MinIoServiceImpl implements MinIoService {
       return ".mov";
     }
     return ".jpg";
+  }
+
+  @Override
+  public PresignedUrlResponse generatePresignedPutUrl(String objectKey, String mimeType) {
+    if (mimeType == null || !ALLOWED_PRESIGNED_MIME_TYPES.contains(mimeType.toLowerCase())) {
+      throw new ResException(ResErrorCode.BAD_REQUEST, "mimeType", "Unsupported media type: " + mimeType);
+    }
+
+    try {
+      String presignedUrl = minioClient.getPresignedObjectUrl(
+          GetPresignedObjectUrlArgs.builder()
+              .bucket(minioProperties.getBucketName())
+              .object(objectKey)
+              .method(Method.PUT)
+              .expiry(15, TimeUnit.MINUTES)
+              .extraHeaders(Map.of("Content-Type", mimeType))
+              .build()
+      );
+
+      return PresignedUrlResponse.builder()
+          .presignedUrl(presignedUrl)
+          .objectKey(objectKey)
+          .publicUrl(buildObjectUrl(objectKey))
+          .expiresInSeconds(900L)
+          .build();
+
+    } catch (ResException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      log.error("Failed to generate presigned URL for objectKey={}: {}", objectKey, ex.getMessage());
+      throw new ResException(ResErrorCode.GENERAL_ERROR, "Cannot generate presigned URL");
+    }
   }
 }

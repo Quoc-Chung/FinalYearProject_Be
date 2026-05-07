@@ -7,6 +7,7 @@ import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
+import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.PageResponseUtil;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
@@ -17,6 +18,7 @@ import java.security.Principal;
 import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,14 +37,11 @@ public class UserController {
 
   @PutMapping(value = "/me", consumes = {"multipart/form-data"})
   public APIResponse<UserResponse> updateMe(
-      Principal principal,
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
       @Valid @ModelAttribute UserRequest request
   ) {
-    if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
-      throw new ResException(ResErrorCode.UNAUTHORIZED);
-    }
 
-    UserResponse data = userService.updateMe(principal.getName(), request);
+    UserResponse data = userService.updateMe(userPrincipal.getEmail(), request);
 
     APIResponse<UserResponse> response = new APIResponse<>();
     response.setStatus(ResponseStatus.SUCCESS_STATUS);
