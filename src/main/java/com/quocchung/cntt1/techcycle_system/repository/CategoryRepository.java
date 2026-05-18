@@ -20,6 +20,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
   Page<Category> findAll(Pageable pageable);
 
+  List<Category> findByParent_CategoryId(Long parentId);
+
   @Query("SELECT c FROM Category c WHERE " +
          "(:searchText IS NULL OR :searchText = '' OR " +
          "LOWER(c.name) LIKE LOWER(CONCAT('%', :searchText, '%')))")

@@ -406,6 +406,86 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
+  public List<PostResponse> searchPostsNoPage(
+      String keyword,
+      String title,
+      String description,
+      String authorName,
+      String address,
+      String province,
+      String ward,
+      Long categoryId,
+      Long brandId,
+      Double minPrice,
+      Double maxPrice,
+      String tag
+  ) {
+    Specification<Post> spec = Specification.where(null);
+
+    if (keyword != null && !keyword.isBlank()) {
+      Specification<Post> keywordSpec = Specification.where(
+          PostSpecifications.hasTitle(keyword)
+      ).or(PostSpecifications.hasDescription(keyword))
+       .or(PostSpecifications.hasAuthorFullName(keyword))
+       .or(PostSpecifications.hasAddressLine(keyword));
+      spec = spec.and(keywordSpec);
+    }
+
+    if (title != null && !title.isBlank()) {
+      spec = spec.and(PostSpecifications.hasTitle(title));
+    }
+
+    if (description != null && !description.isBlank()) {
+      spec = spec.and(PostSpecifications.hasDescription(description));
+    }
+
+    if (authorName != null && !authorName.isBlank()) {
+      spec = spec.and(PostSpecifications.hasAuthorFullName(authorName));
+    }
+
+    if (address != null && !address.isBlank()) {
+      spec = spec.and(PostSpecifications.hasAddressLine(address));
+    }
+
+    if (province != null && !province.isBlank()) {
+      spec = spec.and(PostSpecifications.hasProvince(province));
+    }
+
+    if (ward != null && !ward.isBlank()) {
+      spec = spec.and(PostSpecifications.hasWard(ward));
+    }
+
+    if (categoryId != null) {
+      List<Long> categoryIds = getAllCategoryIds(categoryId);
+      spec = spec.and(
+          PostSpecifications
+              .hasCategoryIds(categoryIds)
+      );
+    }
+
+    if (brandId != null) {
+      spec = spec.and(PostSpecifications.hasBrandId(brandId));
+    }
+
+    if (minPrice != null) {
+      spec = spec.and(PostSpecifications.minPrice(minPrice));
+    }
+
+    if (maxPrice != null) {
+      spec = spec.and(PostSpecifications.maxPrice(maxPrice));
+    }
+
+    if (tag != null && !tag.isBlank()) {
+      spec = spec.and(PostSpecifications.hasTag(tag));
+    }
+
+    return postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
+        .stream()
+        .map(this::mapToResponse)
+        .toList();
+  }
+
+  @Override
   @Transactional
   public PostResponse approvePost(Long postId, Long adminId) {
     Post post = postRepository.findById(postId)
@@ -450,11 +530,36 @@ public class PostServiceImpl implements PostService {
         .toList();
   }
 
+  @Override
+  public List<PostResponse> searchPostsByCategory(Long categoryId) {
+    Specification<Post> spec = Specification.where(null);
+    if (categoryId != null) {
+      spec = spec.and(PostSpecifications.hasCategoryId(categoryId));
+    }
+    return postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
+        .stream()
+        .map(this::mapToResponse)
+        .toList();
+  }
+
   private String slugify(String input) {
     return input.trim()
         .toLowerCase()
         .replaceAll("[^a-z0-9\\s-]", "")
         .replaceAll("\\s+", "-");
+  }
+  private List<Long> getAllCategoryIds(Long parentId) {
+
+    List<Long> ids = new ArrayList<>();
+    ids.add(parentId);
+    List<Category> children = categoryRepository
+        .findByParent_CategoryId(parentId);
+    ids.addAll(
+        children.stream()
+            .map(Category::getCategoryId)
+            .toList()
+    );
+    return ids;
   }
 
   private PostResponse mapToResponse(Post post) {

@@ -3,6 +3,7 @@ package com.quocchung.cntt1.techcycle_system.repository;
 import com.quocchung.cntt1.techcycle_system.model.Post;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import jakarta.persistence.criteria.Join;
+import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
 public class PostSpecifications {
@@ -14,6 +15,11 @@ public class PostSpecifications {
       }
       return cb.equal(root.get("status"), status);
     };
+  }
+
+  public static Specification<Post> hasCategoryIds(List<Long> categoryIds) {
+    return (root, query, cb) ->
+        root.get("category").get("categoryId").in(categoryIds);
   }
 
   public static Specification<Post> hasKeyword(String keyword) {
@@ -128,9 +134,15 @@ public class PostSpecifications {
       if (tagName == null || tagName.isBlank()) {
         return cb.conjunction();
       }
+      query.distinct(true);
+
       Join<Object, Object> postTagsJoin = root.join("postTags");
       Join<Object, Object> tagJoin = postTagsJoin.join("tag");
-      return cb.like(cb.lower(tagJoin.get("name")), "%" + tagName.toLowerCase() + "%");
+      return cb.like(
+          cb.lower(tagJoin.get("name")),
+          "%" + tagName.toLowerCase() + "%"
+      );
     };
   }
+
 }
