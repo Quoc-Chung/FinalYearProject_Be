@@ -29,6 +29,8 @@ public class PostResponse {
   private LocalDateTime approvedAt;
   private String rejectedReason;
 
+  private String currentUserReaction;
+
   private CategoryInfo category;
   private BrandInfo brand;
   private AuthorInfo author;

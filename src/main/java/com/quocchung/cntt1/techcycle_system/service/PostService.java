@@ -37,9 +37,26 @@ public interface PostService {
       Pageable pageable
   );
 
+  List<PostResponse> searchPostsNoPage(
+      String keyword,
+      String title,
+      String description,
+      String authorName,
+      String address,
+      String province,
+      String ward,
+      Long categoryId,
+      Long brandId,
+      Double minPrice,
+      Double maxPrice,
+      String tag
+  );
+
   PostResponse approvePost(Long postId, Long adminId);
 
   PostResponse rejectPost(Long postId, String reason, Long adminId);
 
   List<PostResponse> getLatestPosts();
+
+  List<PostResponse> searchPostsByCategory(Long categoryId);
 }

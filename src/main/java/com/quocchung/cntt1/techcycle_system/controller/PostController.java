@@ -95,7 +95,7 @@ public class PostController {
   }
 
   @GetMapping("/search")
-  public ResponseEntity<APIResponse<PostResponse>> searchPosts(
+  public ResponseEntity<APIResponse<List<PostResponse>>> searchPosts(
       @RequestParam(required = false) String keyword,
       @RequestParam(required = false) String title,
       @RequestParam(required = false) String description,
@@ -107,17 +107,12 @@ public class PostController {
       @RequestParam(required = false) Long brandId,
       @RequestParam(required = false) Double minPrice,
       @RequestParam(required = false) Double maxPrice,
-      @RequestParam(required = false) String tag,
-      @RequestParam(defaultValue = "1") int page,
-      @RequestParam(defaultValue = "10") int size
+      @RequestParam(required = false) String tag
   ) {
-    int pageIndex = Math.max(1, page) - 1;
-    Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-    Page<PostResponse> result = postService.searchPosts(
+    List<PostResponse> result = postService.searchPostsNoPage(
         keyword, title, description, authorName, address, province, ward,
-        categoryId, brandId, minPrice, maxPrice, tag, pageable);
-    return ResponseEntity.ok(responseUtils.successPage(
-        result.getContent(), result.getNumber() + 1, result.getTotalElements(), result.getSize()));
+        categoryId, brandId, minPrice, maxPrice, tag);
+    return ResponseEntity.ok(responseUtils.success(result));
   }
 
   @GetMapping("/my-posts")
@@ -162,4 +157,11 @@ public class PostController {
     return ResponseEntity.ok(responseUtils.success(posts));
   }
 
+  @GetMapping("/search-category")
+  public ResponseEntity<APIResponse<List<PostResponse>>> searchPostsByCategory(
+      @RequestParam(required = false) Long categoryId
+  ) {
+    List<PostResponse> result = postService.searchPostsByCategory(categoryId);
+    return ResponseEntity.ok(responseUtils.success(result));
+  }
 }
