@@ -41,7 +41,6 @@ public class User {
   @Column(name = "avatar_url", length = 5000)
   private String avatarUrl;
 
-
   @Column(name = "is_first_login", nullable = false)
   private Boolean isFirstLogin;
 
