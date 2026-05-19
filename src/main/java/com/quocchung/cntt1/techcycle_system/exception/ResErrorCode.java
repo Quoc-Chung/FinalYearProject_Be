@@ -46,7 +46,19 @@ public enum ResErrorCode {
   POST_ALREADY_REJECTED(HttpStatus.CONFLICT, "409", "post.already.rejected"),
   CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "category.not.found"),
   BRAND_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "brand.not.found"),
-  USER_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "user.not.found");
+  USER_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "user.not.found"),
+
+  // Chat errors
+  CONVERSATION_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "conversation.not.found"),
+  CONVERSATION_FORBIDDEN(HttpStatus.FORBIDDEN, "403", "conversation.forbidden"),
+  MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "message.not.found"),
+  PARTICIPANT_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "participant.not.found"),
+  PARTICIPANT_ALREADY_EXISTS(HttpStatus.CONFLICT, "409", "participant.already.exists"),
+  USER_ALREADY_PARTICIPANT(HttpStatus.BAD_REQUEST, "400", "user.already.participant"),
+
+  // Reaction errors
+  POST_REACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "reaction.not.found"),
+  POST_REACTION_EXISTED(HttpStatus.CONFLICT, "409", "reaction.already.exists");
 
   private final HttpStatus status;
   private final String code;

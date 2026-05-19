@@ -59,4 +59,13 @@ public interface PostService {
   List<PostResponse> getLatestPosts();
 
   List<PostResponse> searchPostsByCategory(Long categoryId);
+
+  // Methods with userId for current user reaction
+  Page<PostResponse> getPostsPage(Pageable pageable, Long userId);
+
+  List<PostResponse> getApprovedPosts(String keyword, Long categoryId, Long brandId, String ward, String province, Long userId);
+
+  List<PostResponse> getLatestPosts(Long userId);
+
+  List<PostResponse> searchPostsByCategory(Long categoryId, Long userId);
 }

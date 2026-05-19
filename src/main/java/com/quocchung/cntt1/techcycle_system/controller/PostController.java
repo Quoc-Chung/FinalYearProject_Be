@@ -73,11 +73,13 @@ public class PostController {
   @GetMapping("/page")
   public ResponseEntity<APIResponse<PostResponse>> getPostsPage(
       @RequestParam(defaultValue = "1") int page,
-      @RequestParam(defaultValue = "10") int size
+      @RequestParam(defaultValue = "10") int size,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
     int pageIndex = Math.max(1, page) - 1;
     Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-    Page<PostResponse> result = postService.getPostsPage(pageable);
+    Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
+    Page<PostResponse> result = postService.getPostsPage(pageable, userId);
     return ResponseEntity.ok(responseUtils.successPage(
         result.getContent(), result.getNumber() + 1, result.getTotalElements(), result.getSize()));
   }
@@ -88,9 +90,11 @@ public class PostController {
       @RequestParam(required = false) Long categoryId,
       @RequestParam(required = false) Long brandId,
       @RequestParam(required = false) String ward,
-      @RequestParam(required = false) String province
+      @RequestParam(required = false) String province,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
-    List<PostResponse> posts = postService.getApprovedPosts(keyword, categoryId, brandId, ward, province);
+    Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
+    List<PostResponse> posts = postService.getApprovedPosts(keyword, categoryId, brandId, ward, province, userId);
     return ResponseEntity.ok(responseUtils.success(posts));
   }
 
@@ -150,18 +154,21 @@ public class PostController {
   }
 
   @GetMapping("/get-latest-posts")
-  public ResponseEntity<APIResponse<List<PostResponse>>> geLatedPosts(
-    
+  public ResponseEntity<APIResponse<List<PostResponse>>> getLatestPosts(
+      @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
-    List<PostResponse> posts =  postService.getLatestPosts();
+    Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
+    List<PostResponse> posts = postService.getLatestPosts(userId);
     return ResponseEntity.ok(responseUtils.success(posts));
   }
 
   @GetMapping("/search-category")
   public ResponseEntity<APIResponse<List<PostResponse>>> searchPostsByCategory(
-      @RequestParam(required = false) Long categoryId
+      @RequestParam(required = false) Long categoryId,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
-    List<PostResponse> result = postService.searchPostsByCategory(categoryId);
+    Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
+    List<PostResponse> result = postService.searchPostsByCategory(categoryId, userId);
     return ResponseEntity.ok(responseUtils.success(result));
   }
 }

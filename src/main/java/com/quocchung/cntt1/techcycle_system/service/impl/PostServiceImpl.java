@@ -12,9 +12,11 @@ import com.quocchung.cntt1.techcycle_system.model.Post;
 import com.quocchung.cntt1.techcycle_system.model.PostAttribute;
 import com.quocchung.cntt1.techcycle_system.model.PostImage;
 import com.quocchung.cntt1.techcycle_system.model.PostTag;
+import com.quocchung.cntt1.techcycle_system.model.PostReaction;
 import com.quocchung.cntt1.techcycle_system.model.Tag;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
+import com.quocchung.cntt1.techcycle_system.repository.PostReactionRepository;
 import com.quocchung.cntt1.techcycle_system.repository.BrandRepository;
 import com.quocchung.cntt1.techcycle_system.repository.CategoryRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostAttributeRepository;
@@ -27,9 +29,11 @@ import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.service.PostService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
+import com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -50,6 +54,7 @@ public class PostServiceImpl implements PostService {
   private final PostAttributeRepository postAttributeRepository;
   private final TagRepository tagRepository;
   private final PostTagRepository postTagRepository;
+  private final PostReactionRepository postReactionRepository;
   private final MinioProperties minioProperties;
 
   private String buildPublicUrl(String objectKey) {
@@ -532,13 +537,58 @@ public class PostServiceImpl implements PostService {
 
   @Override
   public List<PostResponse> searchPostsByCategory(Long categoryId) {
-    Specification<Post> spec = Specification.where(null);
+    return searchPostsByCategory(categoryId, null);
+  }
+
+  @Override
+  public Page<PostResponse> getPostsPage(Pageable pageable, Long userId) {
+    return postRepository.findAll(pageable).map(post -> mapToResponse(post, userId));
+  }
+
+  @Override
+  public List<PostResponse> getApprovedPosts(String keyword, Long categoryId, Long brandId, String ward, String province, Long userId) {
+    Specification<Post> spec = Specification.where(PostSpecifications.hasStatus(PostStatus.APPROVED));
+
+    if (keyword != null && !keyword.isBlank()) {
+      spec = spec.and(PostSpecifications.hasKeyword(keyword));
+    }
+    if (categoryId != null) {
+      spec = spec.and(PostSpecifications.hasCategoryId(categoryId));
+    }
+    if (brandId != null) {
+      spec = spec.and(PostSpecifications.hasBrandId(brandId));
+    }
+    if (ward != null && !ward.isBlank()) {
+      spec = spec.and(PostSpecifications.hasWard(ward));
+    }
+    if (province != null && !province.isBlank()) {
+      spec = spec.and(PostSpecifications.hasProvince(province));
+    }
+
+    return postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
+        .stream()
+        .map(post -> mapToResponse(post, userId))
+        .toList();
+  }
+
+  @Override
+  public List<PostResponse> getLatestPosts(Long userId) {
+    return postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED)
+        .stream()
+        .limit(20)
+        .map(post -> mapToResponse(post, userId))
+        .toList();
+  }
+
+  @Override
+  public List<PostResponse> searchPostsByCategory(Long categoryId, Long userId) {
+    Specification<Post> spec = Specification.where(PostSpecifications.hasStatus(PostStatus.APPROVED));
     if (categoryId != null) {
       spec = spec.and(PostSpecifications.hasCategoryId(categoryId));
     }
     return postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
         .stream()
-        .map(this::mapToResponse)
+        .map(post -> mapToResponse(post, userId))
         .toList();
   }
 
@@ -562,7 +612,13 @@ public class PostServiceImpl implements PostService {
     return ids;
   }
 
-  private PostResponse mapToResponse(Post post) {
+  private PostResponse mapToResponse(Post post, Long userId) {
+    ReactionType currentUserReaction = null;
+    if (userId != null) {
+      Optional<PostReaction> reaction = postReactionRepository.findByPostPostIdAndUserUserId(post.getPostId(), userId);
+      currentUserReaction = reaction.map(PostReaction::getReactionType).orElse(null);
+    }
+
     return PostResponse.builder()
         .postId(post.getPostId())
         .title(post.getTitle())
@@ -576,6 +632,7 @@ public class PostServiceImpl implements PostService {
         .approvedBy(post.getApprovedBy())
         .approvedAt(post.getApprovedAt())
         .rejectedReason(post.getRejectedReason())
+        .currentUserReaction(currentUserReaction != null ? currentUserReaction.name() : null)
         .category(post.getCategory() == null ? null :
             PostResponse.CategoryInfo.builder()
                 .categoryId(post.getCategory().getCategoryId())
@@ -629,4 +686,8 @@ public class PostServiceImpl implements PostService {
                 .toList())
         .build();
   }
-}
+
+  private PostResponse mapToResponse(Post post) {
+    return mapToResponse(post, null);
+  }
+  }
