@@ -29,8 +29,11 @@ public class MediaController {
   ) {
     String prefix = mimeType.toLowerCase().startsWith("video/")
         ? "PostMedia/video/" : "PostMedia/image/";
-    String objectKey = prefix + userPrincipal.getUserId() + "/"
-        + System.currentTimeMillis() + "-" + UUID.randomUUID() + getExtension(fileName, mimeType);
+    String objectKey = prefix
+                       + userPrincipal.getUserId() + "/"
+                       + System.currentTimeMillis()
+                       + "-" + UUID.randomUUID()
+                       + getExtension(fileName, mimeType);
 
     PresignedUrlResponse response = minIoService.generatePresignedPutUrl(objectKey, mimeType);
     return ResponseEntity.ok(responseUtils.success(response));
@@ -49,6 +52,24 @@ public class MediaController {
       default -> ".jpg";
     };
   }
+  @GetMapping("/comment/presigned-url")
+  public ResponseEntity<APIResponse<PresignedUrlResponse>> getCommentPresignedUrl(
+      @RequestParam String fileName,
+      @RequestParam String mimeType,
+      @RequestParam Long commentId,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    String prefix = mimeType.toLowerCase().startsWith("video/")
+        ? "CommentMedia/video/" : "CommentMedia/image/";
 
+    String objectKey = prefix
+                       + userPrincipal.getUserId() + "/"
+                       + commentId + "/"
+                       + System.currentTimeMillis() + "-" + UUID.randomUUID()
+                       + getExtension(fileName, mimeType);
+
+    PresignedUrlResponse response = minIoService.generatePresignedPutUrl(objectKey, mimeType);
+    return ResponseEntity.ok(responseUtils.success(response));
+  }
 }
 
