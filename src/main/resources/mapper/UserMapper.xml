@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.quocchung.cntt1.techcycle_system.mapper.UserMapper">
+
+  <resultMap id="UserResponseResultMap"
+    type="com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse">
+    <id property="userId" column="user_id"/>
+    <result property="email" column="email"/>
+    <result property="fullName" column="full_name"/>
+    <result property="phone" column="phone"/>
+    <result property="bio" column="bio"/>
+    <result property="avatarUrl" column="avatar_url"/>
+    <result property="status" column="status"/>
+    <result property="isFirstLogin" column="is_first_login"/>
+    <result property="trustScore" column="trust_score"/>
+    <result property="bannedReason" column="banned_reason"/>
+    <result property="createdAt" column="created_at"/>
+    <result property="updatedAt" column="updated_at"/>
+  </resultMap>
+
+  <select id="searchUsers" resultMap="UserResponseResultMap">
+    SELECT
+      u.user_id,
+      u.email,
+      u.full_name,
+      u.phone,
+      u.bio,
+      u.avatar_url,
+      u.status,
+      u.is_first_login,
+      u.trust_score,
+      u.banned_reason,
+      u.created_at,
+      u.updated_at
+    FROM users u
+    <where>
+      <if test="searchText != null and searchText != ''">
+        AND (
+          LOWER(u.email) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+          OR LOWER(u.full_name) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+          OR LOWER(u.phone) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+        )
+      </if>
+      <if test="status != null and status != ''">
+        AND u.status = #{status}
+      </if>
+    </where>
+    ORDER BY u.created_at DESC
+    LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+  <select id="countSearchUsers" resultType="long">
+    SELECT COUNT(*)
+    FROM users u
+    <where>
+      <if test="searchText != null and searchText != ''">
+        AND (
+          LOWER(u.email) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+          OR LOWER(u.full_name) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+          OR LOWER(u.phone) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+        )
+      </if>
+      <if test="status != null and status != ''">
+        AND u.status = #{status}
+      </if>
+    </where>
+  </select>
+
+</mapper>

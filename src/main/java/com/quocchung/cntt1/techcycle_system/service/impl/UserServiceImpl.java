@@ -1,0 +1,188 @@
+package com.quocchung.cntt1.techcycle_system.service.impl;
+
+import com.quocchung.cntt1.techcycle_system.dtos.request.User.UpdateUserStatusRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserSearchRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserMetadataResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserSearchResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
+import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
+import com.quocchung.cntt1.techcycle_system.exception.ResException;
+import com.quocchung.cntt1.techcycle_system.mapper.UserMapper;
+import com.quocchung.cntt1.techcycle_system.model.Address;
+import com.quocchung.cntt1.techcycle_system.model.User;
+import com.quocchung.cntt1.techcycle_system.model.UserImage;
+import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
+import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserImageRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
+import com.quocchung.cntt1.techcycle_system.service.MinIoService;
+import com.quocchung.cntt1.techcycle_system.service.UserService;
+import com.quocchung.cntt1.techcycle_system.utils.Converter;
+import com.quocchung.cntt1.techcycle_system.utils.enums.UserStatus;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+
+  private final UserRepository userRepository;
+  private final UserImageRepository userImageRepository;
+  private final AddressRepository addressRepository;
+  private final MinIoService minioService;
+  private final Converter converter;
+  private final UserMapper userMapper;
+  private final PostRepository postRepository;
+  private final UserFollowRepository userFollowRepository;
+  private final UserReviewRepository userReviewRepository;
+
+  @Override
+  @Transactional
+  public UserResponse updateMe(String email, UserRequest request) {
+    User user = userRepository.findByEmail(email)
+        .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS, "User not found"));
+
+    updateBasicInfo(user, request);
+    handleAvatar(user, request.getAvatar());
+    handleAddressId(user, request.getAddressId());
+
+    User saved = userRepository.save(user);
+    return converter.mapResponse(saved);
+  }
+
+  private void updateBasicInfo(User user, UserRequest request) {
+    if (request.getFullName() != null && !request.getFullName().isBlank()) {
+      user.setFullName(request.getFullName().trim());
+    }
+    if (request.getPhone() != null) {
+      user.setPhone(request.getPhone().trim());
+    }
+    if (request.getBio() != null) {
+      user.setBio(request.getBio().trim());
+    }
+  }
+
+  private void handleAvatar(User user, MultipartFile avatarFile) {
+    if (avatarFile == null || avatarFile.isEmpty()) {
+      return;
+    }
+
+    UserImage currentAvatar = userImageRepository.findFirstByUserUserIdAndIsAvatarTrue(
+        user.getUserId()).orElse(null);
+    String oldObjectKey = currentAvatar != null ? currentAvatar.getObjectKey() : null;
+
+    StorageUploadResponse uploadResult = minioService.uploadUserAvatar(avatarFile,
+        user.getUserId());
+    user.setAvatarUrl(uploadResult.getUrl());
+
+    UserImage avatarRow = currentAvatar != null ? currentAvatar : UserImage.builder()
+        .user(user)
+        .isAvatar(true)
+        .build();
+
+    avatarRow.setObjectKey(uploadResult.getObjectKey());
+    avatarRow.setImageUrl(uploadResult.getUrl());
+    userImageRepository.save(avatarRow);
+
+    if (oldObjectKey != null && !oldObjectKey.equals(uploadResult.getObjectKey())) {
+      minioService.deleteObjectSilently(oldObjectKey);
+    }
+  }
+
+  private void handleAddressId(User user, Long addressId) {
+    if (addressId == null) {
+      return;
+    }
+
+    Address address = addressRepository.findById(addressId)
+        .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS, "Address not found"));
+
+    if (!address.getUserId().equals(user.getUserId())) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED, "Address does not belong to this user");
+    }
+
+    List<Address> userAddresses = addressRepository.findByUserId(user.getUserId());
+    userAddresses.forEach(addr -> {
+      addr.setIsDefault(false);
+      addressRepository.save(addr);
+    });
+
+    address.setIsDefault(true);
+    addressRepository.save(address);
+  }
+
+  @Override
+  @Transactional
+  public void updateUserStatus(Long userId, UpdateUserStatusRequest request) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS, "User not found"));
+
+    UserStatus newStatus;
+    try {
+      newStatus = UserStatus.valueOf(request.getStatus().toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new ResException(ResErrorCode.INVALID_REQUEST, "Invalid status value: " + request.getStatus());
+    }
+
+    user.setStatus(newStatus);
+
+    // Set reason khi ban/unban user
+    if (request.getReason() != null && !request.getReason().isBlank()) {
+      user.setBannedReason(request.getReason().trim());
+    } else {
+      user.setBannedReason(null);
+    }
+
+    userRepository.save(user);
+  }
+
+
+  @Override
+  public UserSearchResponse searchUsers(UserSearchRequest request) {
+    int page = request.getPage() != null && request.getPage() > 0 ? request.getPage() : 1;
+    int size = request.getSize() != null && request.getSize() > 0 ? request.getSize() : 10;
+    int offset = (page - 1) * size;
+
+    List<UserResponse> users = userMapper.searchUsers(
+        request.getSearchText(),
+        request.getStatus(),
+        offset,
+        size
+    );
+    Long totalElements = userMapper.countSearchUsers(
+        request.getSearchText(),
+        request.getStatus()
+    );
+    return UserSearchResponse.builder()
+        .users(users)
+        .totalElements(totalElements)
+        .build();
+  }
+
+  @Override
+  public UserMetadataResponse getUserMetadata(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND,
+            "Không tìm thấy người dùng với id: " + userId));
+
+    long countPost = postRepository.countByUserUserId(userId);
+    long countUserFollow = userFollowRepository.countFollowersByUserId(userId);
+    Double ratingScore = userReviewRepository.getAverageRatingByUserId(userId);
+    Double userTrustScore = user.getTrustScore();
+    Long trustScore = userTrustScore != null ? userTrustScore.longValue() : 0L;
+
+    return UserMetadataResponse.builder()
+        .trustScore(trustScore)
+        .countPost(countPost)
+        .countUserFollow(countUserFollow)
+        .ratingScore(ratingScore != null ? ratingScore : 0.0)
+        .build();
+  }
+}

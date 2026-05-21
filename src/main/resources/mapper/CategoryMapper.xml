@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.quocchung.cntt1.techcycle_system.mapper.CategoryMapper">
+
+  <resultMap id="CategoryResultMap"
+    type="com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryTreeResponse">
+    <id property="categoryId" column="category_id"/>
+    <result property="parentId" column="parent_id"/>
+    <result property="parentName" column="parent_name"/>
+    <result property="name" column="name"/>
+    <result property="iconUrl" column="icon_url"/>
+    <result property="isActive" column="is_active"/>
+  </resultMap>
+
+  <select id="getAllCategories" resultMap="CategoryResultMap">
+    SELECT
+    c.category_id,
+    c.parent_id,
+    p.name AS parent_name,
+    c.name,
+    c.icon_url,
+    c.is_active
+    FROM categories c
+    LEFT JOIN categories p ON c.parent_id = p.category_id
+    <where>
+      <if test="searchText != null and searchText != ''">
+        AND LOWER(c.name) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+      </if>
+    </where>
+    ORDER BY c.category_id DESC
+  </select>
+
+</mapper>
