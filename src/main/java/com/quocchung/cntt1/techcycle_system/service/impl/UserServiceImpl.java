@@ -2,6 +2,7 @@ package com.quocchung.cntt1.techcycle_system.service.impl;
 
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UpdateUserStatusRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserSearchRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserMetadataResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserSearchResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadResponse;
@@ -13,8 +14,11 @@ import com.quocchung.cntt1.techcycle_system.model.Address;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserImage;
 import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
+import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserImageRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
 import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.Converter;
@@ -35,6 +39,9 @@ public class UserServiceImpl implements UserService {
   private final MinIoService minioService;
   private final Converter converter;
   private final UserMapper userMapper;
+  private final PostRepository postRepository;
+  private final UserFollowRepository userFollowRepository;
+  private final UserReviewRepository userReviewRepository;
 
   @Override
   @Transactional
@@ -156,6 +163,26 @@ public class UserServiceImpl implements UserService {
     return UserSearchResponse.builder()
         .users(users)
         .totalElements(totalElements)
+        .build();
+  }
+
+  @Override
+  public UserMetadataResponse getUserMetadata(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND,
+            "Không tìm thấy người dùng với id: " + userId));
+
+    long countPost = postRepository.countByUserUserId(userId);
+    long countUserFollow = userFollowRepository.countFollowersByUserId(userId);
+    Double ratingScore = userReviewRepository.getAverageRatingByUserId(userId);
+    Double userTrustScore = user.getTrustScore();
+    Long trustScore = userTrustScore != null ? userTrustScore.longValue() : 0L;
+
+    return UserMetadataResponse.builder()
+        .trustScore(trustScore)
+        .countPost(countPost)
+        .countUserFollow(countUserFollow)
+        .ratingScore(ratingScore != null ? ratingScore : 0.0)
         .build();
   }
 }

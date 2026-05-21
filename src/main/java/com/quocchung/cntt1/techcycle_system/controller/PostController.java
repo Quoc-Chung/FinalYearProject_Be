@@ -2,11 +2,13 @@ package com.quocchung.cntt1.techcycle_system.controller;
 
 
 import com.quocchung.cntt1.techcycle_system.dtos.request.Post.CreatePostRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Post.PostDetailUser;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Post.PostResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 
 import com.quocchung.cntt1.techcycle_system.service.PostService;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
+import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -171,4 +173,26 @@ public class PostController {
     List<PostResponse> result = postService.searchPostsByCategory(categoryId, userId);
     return ResponseEntity.ok(responseUtils.success(result));
   }
+
+  @GetMapping("/post-detail-user/{postId}")
+  public ResponseEntity<APIResponse<PostDetailUser>> getPostDetailUser(@PathVariable Long postId) {
+    return ResponseEntity.ok(responseUtils.success(postService.getPostDetailUser(postId)));
+  }
+
+  @GetMapping("/hot-post")
+  public ResponseEntity<APIResponse<List<PostResponse>>> hotPost(
+  ) {
+    List<PostResponse> result = postService.hotPost();
+    return ResponseEntity.ok(responseUtils.success(result));
+  }
+  // Lấy bài đăng từ
+  @GetMapping("/my-posts-by-status")
+  public ResponseEntity<APIResponse<List<PostResponse>>> getMyPosts(
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
+      @RequestParam(required = false) PostStatus status
+  ) {
+    List<PostResponse> result = postService.getMyPostsByStatus(userPrincipal.getUserId(), status);
+    return ResponseEntity.ok(responseUtils.success(result));
+  }
+
 }

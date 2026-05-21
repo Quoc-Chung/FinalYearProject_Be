@@ -31,4 +31,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
   void decrementLikesCount(@Param("commentId") Long commentId);
 
   boolean existsByCommentIdAndUserUserId(Long commentId, Long userId);
+
+  @Query("SELECT c.post.postId, COUNT(c) FROM Comment c WHERE c.post.postId IN :postIds GROUP BY c.post.postId")
+  List<Object[]> countCommentsByPostIds(@Param("postIds") List<Long> postIds);
 }

@@ -51,7 +51,7 @@ public class User {
 
   @Column(name = "trust_score")
   @Builder.Default
-  private Integer trustScore = 0;
+  private Double trustScore = 0.0;
 
   @Column(name = "banned_reason", length = 500)
   private String bannedReason;

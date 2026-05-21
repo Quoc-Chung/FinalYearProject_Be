@@ -2,6 +2,7 @@ package com.quocchung.cntt1.techcycle_system.controller;
 
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UpdateUserStatusRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserSearchRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserMetadataResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserSearchResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
@@ -10,6 +11,7 @@ import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.PageResponseUtil;
+import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
 import com.quocchung.cntt1.techcycle_system.utils.response.PageResponse;
 import com.quocchung.cntt1.techcycle_system.utils.response.ResponseStatus;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserController {
   private final UserService userService;
+  private final ResponseUtils responseUtils;
 
   @PutMapping(value = "/me", consumes = {"multipart/form-data"})
   public APIResponse<UserResponse> updateMe(
@@ -98,4 +101,14 @@ public class UserController {
     response.setExtraData(Collections.emptyMap());
     return response;
   }
+
+  @GetMapping("/metadata")
+  public APIResponse<UserMetadataResponse> getUserMetadata(
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    UserMetadataResponse userMetadataResponse = userService.getUserMetadata(userPrincipal.getUserId());
+    return responseUtils.success(userMetadataResponse);
+  }
+
+
 }

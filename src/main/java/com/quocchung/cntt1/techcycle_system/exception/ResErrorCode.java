@@ -58,7 +58,10 @@ public enum ResErrorCode {
 
   // Reaction errors
   POST_REACTION_NOT_FOUND(HttpStatus.NOT_FOUND, "404", "reaction.not.found"),
-  POST_REACTION_EXISTED(HttpStatus.CONFLICT, "409", "reaction.already.exists");
+  POST_REACTION_EXISTED(HttpStatus.CONFLICT, "409", "reaction.already.exists"),
+
+  // Save post errors
+  CANNOT_SAVE_OWN_POST(HttpStatus.BAD_REQUEST, "400", "save.post.cannot.save.own.post");
 
   private final HttpStatus status;
   private final String code;
