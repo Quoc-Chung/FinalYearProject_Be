@@ -18,14 +18,12 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, Long
 
   List<PostReaction> findByPostPostId(Long postId);
 
-  List<PostReaction> findByPostPostIdAndReactionType(Long postId, ReactionType reactionType);
-
-  long countByPostPostId(Long postId);
-
-  long countByPostPostIdAndReactionType(Long postId, ReactionType reactionType);
 
   @Query("SELECT pr.reactionType, COUNT(pr) FROM PostReaction pr WHERE pr.post.postId = :postId GROUP BY pr.reactionType")
   List<Object[]> countReactionsByType(@Param("postId") Long postId);
 
   boolean existsByPostPostIdAndUserUserId(Long postId, Long userId);
+
+  @Query("SELECT pr.post.postId, COUNT(pr) FROM PostReaction pr WHERE pr.post.postId IN :postIds GROUP BY pr.post.postId")
+  List<Object[]> countReactionsByPostIds(@Param("postIds") List<Long> postIds);
 }

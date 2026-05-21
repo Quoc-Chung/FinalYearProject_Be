@@ -16,5 +16,5 @@ public class ReactionUserInfo {
     private String ward;
     private String province;
     private String avatarUrl;
-    private Integer trustScore;
+    private Double trustScore;
 }

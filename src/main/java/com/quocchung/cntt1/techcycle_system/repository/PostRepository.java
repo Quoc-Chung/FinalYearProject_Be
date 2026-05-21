@@ -19,8 +19,13 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
   Page<Post> findByUserUserId(Long userId, Pageable pageable);
 
-  List<Post> findByStatus(PostStatus status);
+  List<Post> findByUserUserId(Long userId);
+
+  long countByUserUserId(Long userId);
+
 
   List<Post> findByStatusOrderByCreatedAtDesc(PostStatus status);
+
+  List<Post> findByUserUserIdAndStatus(Long userId, PostStatus status);
 
 }

@@ -21,7 +21,7 @@ public class UserResponse {
   private String status;
   private Boolean isFirstLogin;
   @Builder.Default
-  private Integer trustScore = 0;
+  private Double trustScore = 0.0;
   private String addressLine;
   private Long defaultAddressId;
   private LocalDateTime createdAt;

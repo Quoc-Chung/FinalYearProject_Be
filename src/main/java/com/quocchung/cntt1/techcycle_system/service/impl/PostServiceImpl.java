@@ -2,12 +2,14 @@ package com.quocchung.cntt1.techcycle_system.service.impl;
 
 import com.quocchung.cntt1.techcycle_system.config.MinioProperties;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Post.CreatePostRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Post.PostDetailUser;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Post.PostResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.Address;
 import com.quocchung.cntt1.techcycle_system.model.Brand;
 import com.quocchung.cntt1.techcycle_system.model.Category;
+import com.quocchung.cntt1.techcycle_system.model.Comment;
 import com.quocchung.cntt1.techcycle_system.model.Post;
 import com.quocchung.cntt1.techcycle_system.model.PostAttribute;
 import com.quocchung.cntt1.techcycle_system.model.PostImage;
@@ -19,13 +21,16 @@ import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostReactionRepository;
 import com.quocchung.cntt1.techcycle_system.repository.BrandRepository;
 import com.quocchung.cntt1.techcycle_system.repository.CategoryRepository;
+import com.quocchung.cntt1.techcycle_system.repository.CommentRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostAttributeRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostImageRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostTagRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostSpecifications;
 import com.quocchung.cntt1.techcycle_system.repository.TagRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
 import com.quocchung.cntt1.techcycle_system.service.PostService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
@@ -33,7 +38,9 @@ import com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +63,9 @@ public class PostServiceImpl implements PostService {
   private final PostTagRepository postTagRepository;
   private final PostReactionRepository postReactionRepository;
   private final MinioProperties minioProperties;
+  private final UserFollowRepository userFollowRepository;
+  private final UserReviewRepository userReviewRepository;
+  private final CommentRepository commentRepository;
 
   private String buildPublicUrl(String objectKey) {
     String base = minioProperties.getPublicEndpoint();
@@ -619,6 +629,8 @@ public class PostServiceImpl implements PostService {
       currentUserReaction = reaction.map(PostReaction::getReactionType).orElse(null);
     }
 
+    long commentCount = commentRepository.countByPostId(post.getPostId());
+
     return PostResponse.builder()
         .postId(post.getPostId())
         .title(post.getTitle())
@@ -684,10 +696,116 @@ public class PostServiceImpl implements PostService {
             post.getPostTags().stream()
                 .map(pt -> pt.getTag().getName())
                 .toList())
+        .commentCount(commentCount)
         .build();
   }
 
   private PostResponse mapToResponse(Post post) {
     return mapToResponse(post, null);
   }
+
+  @Override
+  public PostDetailUser getPostDetailUser(Long postId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
+
+    User author = post.getUser();
+
+    Double avgRating = userReviewRepository.getAverageRatingByUserId(author.getUserId());
+    long followerCount = userFollowRepository.countFollowersByUserId(author.getUserId());
+    long postCount = postRepository.countByUserUserId(author.getUserId());
+
+    float rating = avgRating != null ? avgRating.floatValue() : 0f;
+    float responseRate = 0f;
+    if (postCount > 0 && followerCount > 0) {
+      responseRate = Math.min((float) followerCount / postCount, 5f);
+    }
+
+    List<PostDetailUser.PostSeller> postSellerList = postRepository
+        .findByUserUserId(author.getUserId())
+        .stream()
+        .filter(p -> p.getPostId() != null)
+        .map(p -> PostDetailUser.PostSeller.builder()
+            .title(p.getTitle())
+            .price(p.getPrice() != null ? p.getPrice().toString() : null)
+            .build())
+        .toList();
+
+    String avatarUrl = author.getAvatarUrl();
+    if (avatarUrl != null && !avatarUrl.startsWith("http")) {
+      avatarUrl = buildPublicUrl(avatarUrl);
+    }
+
+    String addressLine = post.getAddress() != null ? (post.getAddress().getWard() + ", "+ post.getAddress().getProvince() ): null;
+
+
+    return PostDetailUser.builder()
+        .username(author.getFullName())
+        .email(author.getEmail())
+        .createDate(author.getCreatedAt() != null ? author.getCreatedAt().toString() : null)
+        .avatarUrl(avatarUrl)
+        .addressLine(addressLine)
+        .bio(author.getBio())
+        .rating(rating)
+        .responseRate(responseRate)
+        .trustScore(author.getTrustScore() != null ? author.getTrustScore() : 0)
+        .countFlow((float) followerCount)
+        .postSellerList(postSellerList)
+        .build();
   }
+
+  @Override
+  public List<PostResponse> hotPost() {
+    List<Post> approvedPosts = postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED);
+
+    if (approvedPosts.isEmpty()) {
+      return List.of();
+    }
+
+    List<Long> postIds = approvedPosts.stream()
+        .map(Post::getPostId)
+        .toList();
+
+    Map<Long, Long> reactionCountMap = postReactionRepository.countReactionsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    Map<Long, Long> commentCountMap = commentRepository.countCommentsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    List<Post> hotPosts = approvedPosts.stream()
+        .sorted((p1, p2) -> {
+          long r1 = reactionCountMap.getOrDefault(p1.getPostId(), 0L);
+          long c1 = commentCountMap.getOrDefault(p1.getPostId(), 0L);
+          long r2 = reactionCountMap.getOrDefault(p2.getPostId(), 0L);
+          long c2 = commentCountMap.getOrDefault(p2.getPostId(), 0L);
+          return Long.compare(r2 + c2, r1 + c1);
+        })
+        .limit(20)
+        .toList();
+
+    return hotPosts.stream()
+        .map(post -> mapToResponse(post))
+        .toList();
+  }
+
+  @Override
+  public List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status) {
+    List<Post> posts;
+    if (status != null) {
+      posts = postRepository.findByUserUserIdAndStatus(userId, status);
+    } else {
+      posts = postRepository.findByUserUserId(userId);
+    }
+    return posts.stream()
+        .map(post -> mapToResponse(post, userId))
+        .toList();
+  }
+}

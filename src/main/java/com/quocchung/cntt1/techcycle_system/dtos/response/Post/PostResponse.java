@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,6 +26,9 @@ public class PostResponse {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
 
+  // Trả về nếu bị từ chối thì nó sẽ đi kèm lý do
+  private String reason;
+
   private Long approvedBy;
   private LocalDateTime approvedAt;
   private String rejectedReason;
@@ -39,6 +43,8 @@ public class PostResponse {
   private List<PostImageInfo> images;
   private List<PostAttributeInfo> attributes;
   private List<String> tags;
+
+  private Long commentCount;
 
 
   @Data @Builder @NoArgsConstructor @AllArgsConstructor

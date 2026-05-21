@@ -1,7 +1,9 @@
 package com.quocchung.cntt1.techcycle_system.service;
 
 import com.quocchung.cntt1.techcycle_system.dtos.request.Post.CreatePostRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Post.PostDetailUser;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Post.PostResponse;
+import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -68,4 +70,10 @@ public interface PostService {
   List<PostResponse> getLatestPosts(Long userId);
 
   List<PostResponse> searchPostsByCategory(Long categoryId, Long userId);
+
+  PostDetailUser getPostDetailUser(Long postId);
+
+  List<PostResponse> hotPost();
+
+  List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status);
 }
