@@ -112,14 +112,13 @@ public class ConversationController {
       @PathVariable Long conversationId,
       @AuthenticationPrincipal UserPrincipal userPrincipal,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "100") int size
+      @RequestParam(defaultValue = "500") int size
   ) {
     Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
     Page<ChatMessageResponse> messages = chatService.getMessages(conversationId, userPrincipal.getUserId(), pageable);
     List<ChatMessageResponse> content = messages.getContent();
     return ResponseEntity.ok(responseUtils.successPage(content, page, messages.getTotalElements(), size));
   }
-
   /**
    * Lấy thông tin chi tiết của một tin nhắn cụ thể.
    */

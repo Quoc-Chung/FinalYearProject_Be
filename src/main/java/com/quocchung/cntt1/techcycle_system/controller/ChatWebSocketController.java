@@ -42,6 +42,11 @@ public class ChatWebSocketController {
   ) {
     User sender = getUserFromPrincipal(principal);
     ChatMessageResponse response = chatService.sendMessage(conversationId, request, sender);
+    log.info(
+        "[WS] Sending message to conversation {}: {}",
+        conversationId,
+        response
+    );
     messagingTemplate.convertAndSend(
         "/topic/conversation." + conversationId,
         response

@@ -1,5 +1,5 @@
 package com.quocchung.cntt1.techcycle_system.service.impl;
-
+import com.quocchung.cntt1.techcycle_system.config.MinioProperties;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ChatMessageRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ConversationResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.CreateConversationRequest;
@@ -12,6 +12,9 @@ import com.quocchung.cntt1.techcycle_system.model.*;
 import com.quocchung.cntt1.techcycle_system.repository.*;
 import com.quocchung.cntt1.techcycle_system.service.ChatService;
 import com.quocchung.cntt1.techcycle_system.config.WebSocketEventListener;
+import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,6 +38,18 @@ public class ChatServiceImpl implements ChatService {
   private final MessageAttachmentRepository attachmentRepository;
   private final UserRepository userRepository;
   private final WebSocketEventListener eventListener;
+  private final MinioProperties minioProperties;
+
+  private String buildPublicUrl(String objectKey) {
+    String base = minioProperties.getPublicEndpoint();
+    if (base == null || base.isBlank()) {
+      base = minioProperties.getEndpoint();
+    }
+    if (base.endsWith("/")) {
+      base = base.substring(0, base.length() - 1);
+    }
+    return base + "/" + minioProperties.getBucketName() + "/" + objectKey;
+  }
 
   @Override
   @Transactional
@@ -149,12 +164,15 @@ public class ChatServiceImpl implements ChatService {
     List<AttachmentResponse> attachments = new ArrayList<>();
     if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
       for (ChatMessageRequest.AttachmentInfo info : request.getAttachments()) {
+        MediaType mediaType = MediaType.FILE;
+
         MessageAttachment attachment = MessageAttachment.builder()
             .message(message)
             .objectKey(info.getObjectKey())
             .mimeType(info.getMimeType())
             .fileSize(info.getFileSize())
             .durationSeconds(info.getDurationSeconds())
+            .mediaType(mediaType)
             .build();
         attachmentRepository.save(attachment);
 
@@ -162,14 +180,15 @@ public class ChatServiceImpl implements ChatService {
             .objectKey(info.getObjectKey())
             .mimeType(info.getMimeType())
             .fileSize(info.getFileSize())
-            .url(info.getObjectKey())
+            .url(buildPublicUrl(info.getObjectKey()))
+            .mediaType(mediaType)
+            .durationSeconds(info.getDurationSeconds())
             .build());
       }
     }
 
     conversation.setLastMessageAt(LocalDateTime.now());
     conversationRepository.save(conversation);
-
     return ChatMessageResponse.fromEntityWithAttachments(message, attachments);
   }
 
@@ -183,9 +202,33 @@ public class ChatServiceImpl implements ChatService {
     Page<Message> messages = messageRepository
         .findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
 
-    return messages.map(ChatMessageResponse::fromEntity);
-  }
+    List<Long> messageIds = messages.getContent().stream()
+        .map(Message::getMessageId)
+        .toList();
 
+    Map<Long, List<AttachmentResponse>> attachmentMap = attachmentRepository
+        .findByMessageIds(messageIds)
+        .stream()
+        .collect(Collectors.groupingBy(
+            att -> att.getMessage().getMessageId(),
+            Collectors.mapping(att -> AttachmentResponse.builder()
+                    .attachmentId(att.getAttachmentId())
+                    .mediaType(att.getMediaType())
+                    .objectKey(att.getObjectKey())
+                    .url(buildPublicUrl(att.getObjectKey()))
+                    .mimeType(att.getMimeType())
+                    .fileSize(att.getFileSize())
+                    .durationSeconds(att.getDurationSeconds())
+                    .build(),
+                Collectors.toList()
+            )
+        ));
+    return messages.map(message -> {
+      List<AttachmentResponse> attachments = attachmentMap
+          .getOrDefault(message.getMessageId(), null);
+      return ChatMessageResponse.fromEntityWithAttachments(message, attachments);
+    });
+  }
   @Override
   @Transactional(readOnly = true)
   public ChatMessageResponse getMessage(Long messageId, Long userId) {
