@@ -735,11 +735,9 @@ public class PostServiceImpl implements PostService {
     if (avatarUrl != null && !avatarUrl.startsWith("http")) {
       avatarUrl = buildPublicUrl(avatarUrl);
     }
-
     String addressLine = post.getAddress() != null ? (post.getAddress().getWard() + ", "+ post.getAddress().getProvince() ): null;
-
-
     return PostDetailUser.builder()
+        .userId(author.getUserId())
         .username(author.getFullName())
         .email(author.getEmail())
         .createDate(author.getCreatedAt() != null ? author.getCreatedAt().toString() : null)
@@ -790,7 +788,6 @@ public class PostServiceImpl implements PostService {
         })
         .limit(20)
         .toList();
-
     return hotPosts.stream()
         .map(post -> mapToResponse(post))
         .toList();

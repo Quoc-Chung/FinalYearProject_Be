@@ -4,26 +4,25 @@ import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ChatMessageRequest
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ConversationResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.CreateConversationRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Chat.AttachmentResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Chat.ChatContactResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Chat.ChatMessageResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.*;
 import com.quocchung.cntt1.techcycle_system.repository.*;
-import com.quocchung.cntt1.techcycle_system.security.CustomUserDetailsService;
 import com.quocchung.cntt1.techcycle_system.service.ChatService;
-import com.quocchung.cntt1.techcycle_system.utils.enums.MessageType;
+import com.quocchung.cntt1.techcycle_system.config.WebSocketEventListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -35,21 +34,31 @@ public class ChatServiceImpl implements ChatService {
   private final MessageRepository messageRepository;
   private final MessageAttachmentRepository attachmentRepository;
   private final UserRepository userRepository;
-  private final PostRepository postRepository;
-  private final CustomUserDetailsService userDetailsService;
+  private final WebSocketEventListener eventListener;
 
   @Override
   @Transactional
-  public ConversationResponse createConversation(CreateConversationRequest request, User creator) {
+  public ConversationResponse createConversation(CreateConversationRequest request, Long creatorId) {
+
+    User creator = userRepository.findById(creatorId)
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+
+    User participant = userRepository.findById(request.getParticipantId())
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+
+    Optional<Conversation> existingConversation = conversationRepository
+        .findDirectConversation(creatorId, participant.getUserId(), 2);
+
+    if (existingConversation.isPresent()) {
+      Conversation conversation = existingConversation.get();
+      List<ConversationParticipant> participants = participantRepository
+          .findByConversationIdWithUser(conversation.getConversationId());
+      return ConversationResponse.fromEntity(conversation, participants, null);
+    }
+
     Conversation conversation = Conversation.builder()
         .createdBy(creator)
         .build();
-
-    if (request.getPostId() != null) {
-      Post post = postRepository.findById(request.getPostId())
-          .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
-      conversation.setPost(post);
-    }
 
     conversation = conversationRepository.save(conversation);
 
@@ -58,33 +67,21 @@ public class ChatServiceImpl implements ChatService {
         .user(creator)
         .isBlocked(false)
         .build();
+
     participantRepository.save(creatorParticipant);
 
-    if (request.getParticipantIds() != null && !request.getParticipantIds().isEmpty()) {
-      for (Long participantId : request.getParticipantIds()) {
-        User participant = userRepository.findById(participantId)
-            .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+    ConversationParticipant participantObj = ConversationParticipant.builder()
+        .conversation(conversation)
+        .user(participant)
+        .isBlocked(false)
+        .build();
 
-        ConversationParticipant cp = ConversationParticipant.builder()
-            .conversation(conversation)
-            .user(participant)
-            .isBlocked(false)
-            .build();
-        participantRepository.save(cp);
-      }
-    }
+    participantRepository.save(participantObj);
 
-    List<ConversationParticipant> participants = participantRepository
-        .findByConversationIdWithUser(conversation.getConversationId());
-
-    if (request.getInitialMessage() != null && !request.getInitialMessage().isBlank()) {
-      ChatMessageRequest messageRequest = ChatMessageRequest.builder()
-          .messageType(MessageType.TEXT)
-          .content(request.getInitialMessage())
-          .build();
-      sendMessage(conversation.getConversationId(), messageRequest, creator);
-    }
-
+    List<ConversationParticipant> participants =
+        participantRepository.findByConversationIdWithUser(
+            conversation.getConversationId()
+        );
     return ConversationResponse.fromEntity(conversation, participants, null);
   }
 
@@ -131,6 +128,7 @@ public class ChatServiceImpl implements ChatService {
   @Override
   @Transactional
   public ChatMessageResponse sendMessage(Long conversationId, ChatMessageRequest request, User sender) {
+
     Conversation conversation = conversationRepository.findById(conversationId)
         .orElseThrow(() -> new ResException(ResErrorCode.CONVERSATION_NOT_FOUND));
 
@@ -227,78 +225,35 @@ public class ChatServiceImpl implements ChatService {
 
   @Override
   @Transactional(readOnly = true)
-  public List<ConversationResponse.UserSummary> getConversationParticipants(Long conversationId) {
-    return participantRepository.findByConversationIdWithUser(conversationId).stream()
-        .map(p -> ConversationResponse.UserSummary.builder()
-            .userId(p.getUser().getUserId())
-            .fullName(p.getUser().getFullName())
-            .avatarUrl(p.getUser().getAvatarUrl())
-            .isOnline(false)
-            .build())
-        .toList();
+  public ConversationResponse findConversationBetweenUsers(Long userId1, Long userId2) {
+    Optional<Conversation> conversation = conversationRepository
+        .findDirectConversation(userId1, userId2, 2);
+
+    if (conversation.isEmpty()) {
+      return null;
+    }
+
+    List<ConversationParticipant> participants = participantRepository
+        .findByConversationIdWithUser(conversation.get().getConversationId());
+
+    ChatMessageResponse lastMessage = messageRepository
+        .findLastMessageByConversationId(conversation.get().getConversationId())
+        .map(ChatMessageResponse::fromEntity)
+        .orElse(null);
+
+    return ConversationResponse.fromEntity(conversation.get(), participants, lastMessage);
   }
 
   @Override
-  @Transactional
-  public void addParticipant(Long conversationId, Long userId, User admin) {
-    if (!hasAdminRights(conversationId, admin)) {
-      throw new ResException(ResErrorCode.PERMISSION_DENIED);
-    }
+  @Transactional(readOnly = true)
+  public Page<ChatContactResponse> getChatContacts(Long userId, Pageable pageable) {
+    Page<Object[]> results = conversationRepository.findChatContactsByUserId(userId, pageable);
 
-    User newParticipant = userRepository.findById(userId)
-        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
-
-    Conversation conversation = conversationRepository.findById(conversationId)
-        .orElseThrow(() -> new ResException(ResErrorCode.CONVERSATION_NOT_FOUND));
-
-    if (participantRepository.existsByConversationConversationIdAndUserUserId(conversationId, userId)) {
-      throw new ResException(ResErrorCode.USER_ALREADY_PARTICIPANT);
-    }
-
-    ConversationParticipant participant = ConversationParticipant.builder()
-        .conversation(conversation)
-        .user(newParticipant)
-        .isBlocked(false)
-        .build();
-
-    participantRepository.save(participant);
-  }
-
-  @Override
-  @Transactional
-  public void removeParticipant(Long conversationId, Long userId, User admin) {
-    if (!hasAdminRights(conversationId, admin)) {
-      throw new ResException(ResErrorCode.PERMISSION_DENIED);
-    }
-
-    ConversationParticipant participant = participantRepository
-        .findByConversationIdAndUserId(conversationId, userId)
-        .orElseThrow(() -> new ResException(ResErrorCode.PARTICIPANT_NOT_FOUND));
-
-    participantRepository.delete(participant);
-  }
-
-  @Override
-  @Transactional
-  public void leaveConversation(Long conversationId, User user) {
-    ConversationParticipant participant = participantRepository
-        .findByConversationIdAndUserId(conversationId, user.getUserId())
-        .orElseThrow(() -> new ResException(ResErrorCode.PARTICIPANT_NOT_FOUND));
-
-    participantRepository.delete(participant);
-  }
-
-  private boolean hasAdminRights(Long conversationId, User user) {
-    Conversation conversation = conversationRepository.findById(conversationId)
-        .orElseThrow(() -> new ResException(ResErrorCode.CONVERSATION_NOT_FOUND));
-
-    if (conversation.getCreatedBy().getUserId().equals(user.getUserId())) {
-      return true;
-    }
-
-    Set<GrantedAuthority> authorities = userDetailsService.buildAuthorities(user.getUserId());
-    return authorities.stream()
-        .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN") 
-                       || auth.getAuthority().equals("ROLE_ADMINISTRATOR"));
+    return results.map(row -> {
+      User user = (User) row[0];
+      java.time.LocalDateTime lastMessageAt = (java.time.LocalDateTime) row[1];
+      boolean isOnline = eventListener.isUserOnline(user.getUserId());
+      return ChatContactResponse.fromUser(user, isOnline, lastMessageAt);
+    });
   }
 }

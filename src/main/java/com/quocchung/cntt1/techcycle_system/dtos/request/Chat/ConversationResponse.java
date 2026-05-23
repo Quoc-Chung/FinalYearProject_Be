@@ -19,8 +19,6 @@ import java.util.List;
 public class ConversationResponse {
 
   private Long conversationId;
-  private Long postId;
-  private String postTitle;
   private UserSummary creator;
   private List<UserSummary> participants;
   private ChatMessageResponse lastMessage;
@@ -63,17 +61,8 @@ public class ConversationResponse {
           .build();
     }
 
-    Long postIdValue = null;
-    String postTitleValue = null;
-    if (conversation.getPost() != null) {
-      postIdValue = conversation.getPost().getPostId();
-      postTitleValue = conversation.getPost().getTitle();
-    }
-
     return ConversationResponse.builder()
         .conversationId(conversation.getConversationId())
-        .postId(postIdValue)
-        .postTitle(postTitleValue)
         .creator(creatorSummary)
         .participants(participantSummaries)
         .lastMessage(lastMessage)
