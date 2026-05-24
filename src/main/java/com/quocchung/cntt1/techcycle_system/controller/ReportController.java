@@ -53,7 +53,7 @@ public class ReportController {
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole( 'ADMIN')")
     public ResponseEntity<APIResponse<ReportResponse>> getReportsByStatus(
             @PathVariable ReportStatus status,
             @RequestParam(defaultValue = "1") int page,
@@ -64,7 +64,7 @@ public class ReportController {
     }
 
     @PutMapping("/{reportId}/resolve")
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole( 'ADMIN')")
     public ResponseEntity<APIResponse<ReportResponse>> resolveReport(
             @PathVariable Long reportId,
             @RequestParam ReportStatus status,

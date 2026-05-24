@@ -52,7 +52,7 @@ public class UserController {
   }
 
   @PostMapping("/update-status/{userId}")
-  @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+  @PreAuthorize("hasAnyRole( 'ADMIN')")
   public APIResponse<Void> updateUserStatus(
       @PathVariable Long userId,
       @Valid @RequestBody UpdateUserStatusRequest request
@@ -67,7 +67,7 @@ public class UserController {
   }
 
   @GetMapping("/search")
-  @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+  @PreAuthorize("hasAnyRole( 'ADMIN')")
   public APIResponse<UserResponse> searchUsers(
       @RequestParam(required = false) String searchText,
       @RequestParam(required = false) String status,

@@ -135,7 +135,7 @@ public class PostController {
   }
 
   @PostMapping("/approve/{id}")
-  @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+  @PreAuthorize("hasAnyRole( 'ADMIN')")
   public ResponseEntity<APIResponse<PostResponse>> approvePost(
       @PathVariable Long id,
       @AuthenticationPrincipal UserPrincipal userPrincipal
@@ -145,7 +145,7 @@ public class PostController {
   }
 
   @PostMapping("/reject/{id}")
-  @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+  @PreAuthorize("hasAnyRole( 'ADMIN')")
   public ResponseEntity<APIResponse<PostResponse>> rejectPost(
       @PathVariable Long id,
       @RequestParam String reason,
