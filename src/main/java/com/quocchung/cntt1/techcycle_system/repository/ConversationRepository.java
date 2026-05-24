@@ -81,4 +81,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
          "LEFT JOIN FETCH c.createdBy " +
          "WHERE c.conversationId IN :ids")
   List<Conversation> findAllByIdsWithDetails(@Param("ids") List<Long> ids);
+
+  @Query("SELECT COUNT(DISTINCT c) FROM Conversation c " +
+         "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
+         "WHERE cp.user.userId = :userId")
+  long countByParticipantUserId(@Param("userId") Long userId);
 }
