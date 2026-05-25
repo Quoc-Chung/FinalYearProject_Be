@@ -7,6 +7,7 @@ import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserFollow;
+import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.service.NotificationService;
@@ -28,6 +29,7 @@ public class UserFollowServiceImpl implements UserFollowService {
 
   private final UserFollowRepository userFollowRepository;
   private final UserRepository userRepository;
+  private final PostRepository postRepository;
   private final NotificationService notificationService;
   // FOLLOW
   @Override
@@ -131,11 +133,18 @@ public class UserFollowServiceImpl implements UserFollowService {
   }
 
   private UserSummaryResponse toUserSummary(User user) {
+    long postCount = postRepository.countByUserUserId(user.getUserId());
+    long followerCount = userFollowRepository.countFollowersByUserId(user.getUserId());
+    long followingCount = userFollowRepository.countFollowingByUserId(user.getUserId());
+
     return UserSummaryResponse.builder()
         .userId(user.getUserId())
         .fullName(user.getFullName())
         .avatarUrl(user.getAvatarUrl())
         .trustScore(user.getTrustScore())
+        .postCount(postCount)
+        .followerCount(followerCount)
+        .followingCount(followingCount)
         .build();
   }
 

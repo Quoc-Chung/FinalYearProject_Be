@@ -195,4 +195,18 @@ public class PostController {
     return ResponseEntity.ok(responseUtils.success(result));
   }
 
+
+  @GetMapping("/user/{userId}")
+  public ResponseEntity<APIResponse<PostResponse>> getPostsByUser(
+      @PathVariable Long userId,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "20") int size
+  ) {
+    int pageIndex = Math.max(1, page) - 1;
+    Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    Page<PostResponse> result = postService.getMyPosts(userId, pageable);
+    return ResponseEntity.ok(responseUtils.successPage(
+        result.getContent(), result.getNumber() + 1, result.getTotalElements(), result.getSize()));
+  }
+
 }

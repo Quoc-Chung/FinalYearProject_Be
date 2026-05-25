@@ -40,7 +40,7 @@ public class Notification {
 
   // Loại thong bao
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 50)
   private NotificationType type;
 
   // Tieu de

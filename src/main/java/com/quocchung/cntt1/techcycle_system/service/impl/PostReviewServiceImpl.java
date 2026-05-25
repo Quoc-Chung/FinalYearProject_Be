@@ -10,13 +10,18 @@ import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostReviewRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
+import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.service.PostReviewService;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,7 @@ public class PostReviewServiceImpl implements PostReviewService {
     private final PostReviewRepository postReviewRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
     @Override
     @Transactional
     public PostReviewResponse createReview(Long postId, Long userId, PostReviewRequest request) {
@@ -46,6 +52,30 @@ public class PostReviewServiceImpl implements PostReviewService {
                 .comment(request.getComment())
                 .build();
         review = postReviewRepository.save(review);
+
+       
+        User postOwner = post.getUser();
+        if (postOwner != null && !postOwner.getUserId().equals(userId)) {
+            String title = "Bài viết được đánh giá mới";
+            String content = user.getFullName() + " đã đánh giá " + request.getRating() + " sao cho bài viết \"" + post.getTitle() + "\"";
+            String targetUrl = "/post/" + postId;
+            Map<String, Object> data = new HashMap<>();
+            data.put("postId", postId);
+            data.put("postTitle", post.getTitle());
+            data.put("rating", request.getRating());
+            data.put("reviewId", review.getReviewId());
+
+            notificationService.createNotification(
+                    postOwner,  // recipient - chủ bài viết
+                    user,       // actor - người đánh giá
+                    NotificationType.POST_REVIEW,
+                    title,
+                    content,
+                    targetUrl,
+                    data
+            );
+        }
+
         return toResponse(review);
     }
 
