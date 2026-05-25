@@ -2,13 +2,17 @@ package com.quocchung.cntt1.techcycle_system.controller;
 
 import com.quocchung.cntt1.techcycle_system.dtos.request.Reaction.ReactionRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Reaction.PostReactionReportResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Reaction.ReactionCountItem;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Reaction.ReactionResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.ReactionService;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
 import jakarta.validation.Valid;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +26,6 @@ public class ReactionController {
   private final ReactionService reactionService;
   private final ResponseUtils responseUtils;
 
-  /**
-   * Add reaction in port
-   * @param postId
-   * @param request
-   * @param userPrincipal
-   * @return
-   */
   @PostMapping("/post/{postId}")
   public ResponseEntity<APIResponse<ReactionResponse>> addReaction(
       @PathVariable Long postId,
@@ -41,13 +38,6 @@ public class ReactionController {
         .body(responseUtils.success(response));
   }
 
-  /**
-   *Update reaction in port
-   * @param postId
-   * @param request
-   * @param userPrincipal
-   * @return
-   */
   @PutMapping("/post/{postId}")
   public ResponseEntity<APIResponse<ReactionResponse>> updateReaction(
       @PathVariable Long postId,
@@ -58,12 +48,7 @@ public class ReactionController {
         postId, request, userPrincipal.getUserId());
     return ResponseEntity.ok(responseUtils.success(response));
   }
-  /**
-   * remove reaction
-   * @param postId
-   * @param userPrincipal
-   * @return
-   */
+
   @DeleteMapping("/post/{postId}")
   public ResponseEntity<APIResponse<Void>> removeReaction(
       @PathVariable Long postId,
@@ -73,12 +58,6 @@ public class ReactionController {
     return ResponseEntity.ok(responseUtils.success(null));
   }
 
-  /**
-   *  Lấy tất cả reactions của một bài viết cụ thể
-   * @param postId
-   * @param userPrincipal
-   * @return
-   */
   @GetMapping("/post/{postId}")
   public ResponseEntity<APIResponse<ReactionResponse>> getReactionsByPost(
       @PathVariable Long postId,
@@ -89,11 +68,6 @@ public class ReactionController {
     return ResponseEntity.ok(responseUtils.success(response));
   }
 
-  /**
-   * Lấy danh sách tất cả reactions mà user đã thả trên các bài viết.
-   * @param userPrincipal
-   * @return
-   */
   @GetMapping("/user/me")
   public ResponseEntity<APIResponse<List<ReactionResponse>>> getMyReactions(
       @AuthenticationPrincipal UserPrincipal userPrincipal
@@ -102,16 +76,35 @@ public class ReactionController {
     return ResponseEntity.ok(responseUtils.success(responses));
   }
 
-  /**
-   * Lấy báo cáo chi tiết reactions của một bài viết
-   * @param postId
-   * @return
-   */
   @GetMapping("/post/{postId}/report")
   public ResponseEntity<APIResponse<PostReactionReportResponse>> getPostReactionReport(
       @PathVariable Long postId
   ) {
     PostReactionReportResponse response = reactionService.getPostReactionReport(postId);
     return ResponseEntity.ok(responseUtils.success(response));
+  }
+
+  /**
+   * Lấy reaction counts cho nhiều bài viết cùng lúc
+   * GET /api/reactions/posts/counts?postIds=1,2,3
+   */
+  @GetMapping("/posts/counts")
+  public ResponseEntity<APIResponse<ReactionCountItem>> getReactionsCountsForPosts(
+      @RequestParam String postIds
+  ) {
+    List<Long> ids = Arrays.stream(postIds.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .map(Long::parseLong)
+        .collect(Collectors.toList());
+    Map<Long, Map<String, Object>> result = reactionService.getReactionsCountsForPosts(ids);
+    List<ReactionCountItem> countsList = result.entrySet().stream()
+        .map(e -> ReactionCountItem.builder()
+            .postId(e.getKey())
+            .totalReactions(((Number) e.getValue().get("totalReactions")).longValue())
+            .topReaction((String) e.getValue().get("topReaction"))
+            .build())
+        .collect(Collectors.toList());
+    return ResponseEntity.ok(responseUtils.successList(countsList));
   }
 }

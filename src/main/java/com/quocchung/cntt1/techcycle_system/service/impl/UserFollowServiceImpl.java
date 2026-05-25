@@ -9,7 +9,9 @@ import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserFollow;
 import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
+import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.service.UserFollowService;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,12 +20,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class UserFollowServiceImpl implements UserFollowService {
 
   private final UserFollowRepository userFollowRepository;
   private final UserRepository userRepository;
+  private final NotificationService notificationService;
   // FOLLOW
   @Override
   @Transactional
@@ -45,6 +50,16 @@ public class UserFollowServiceImpl implements UserFollowService {
         .following(following)
         .build();
     userFollowRepository.save(userFollow);
+
+    notificationService.createNotification(
+        following,
+        follower,
+        NotificationType.USER_FOLLOWED,
+        follower.getFullName() + " đã theo dõi bạn",
+        follower.getFullName() + " đã bắt đầu theo dõi bạn trên Techcycle",
+        "/profile/" + follower.getUserId(),
+        Map.of("followerId", follower.getUserId())
+    );
   }
   // UNFOLLOW
   @Override
@@ -97,7 +112,7 @@ public class UserFollowServiceImpl implements UserFollowService {
   // ĐẾM SỐ FOLLOW
   @Override
   public FollowCountResponse getFollowCount(Long userId) {
-    User user = getUserOrThrow(userId);
+    getUserOrThrow(userId);
 
     long followerCount = userFollowRepository.countFollowersByUserId(userId);
     long followingCount = userFollowRepository.countFollowingByUserId(userId);

@@ -32,7 +32,9 @@ import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
 import com.quocchung.cntt1.techcycle_system.service.PostService;
+import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType;
 import java.time.LocalDateTime;
@@ -66,6 +68,7 @@ public class PostServiceImpl implements PostService {
   private final UserFollowRepository userFollowRepository;
   private final UserReviewRepository userReviewRepository;
   private final CommentRepository commentRepository;
+  private final NotificationService notificationService;
 
   private String buildPublicUrl(String objectKey) {
     String base = minioProperties.getPublicEndpoint();
@@ -515,7 +518,20 @@ public class PostServiceImpl implements PostService {
     post.setApprovedAt(LocalDateTime.now());
     post.setRejectedReason(null);
 
-    return mapToResponse(postRepository.save(post));
+    Post saved = postRepository.save(post);
+
+    User admin = userRepository.findById(adminId).orElse(null);
+    notificationService.createNotification(
+        post.getUser(),
+        admin,
+        NotificationType.POST_APPROVED,
+        "Bài đăng của bạn đã được duyệt",
+        "Bài đăng \"" + post.getTitle() + "\" đã được duyệt và hiển thị công khai",
+        "/post/" + postId,
+        Map.of("postId", postId)
+    );
+
+    return mapToResponse(saved);
   }
 
   @Override
@@ -533,7 +549,20 @@ public class PostServiceImpl implements PostService {
     post.setApprovedAt(LocalDateTime.now());
     post.setRejectedReason(reason);
 
-    return mapToResponse(postRepository.save(post));
+    Post saved = postRepository.save(post);
+
+    User admin = userRepository.findById(adminId).orElse(null);
+    notificationService.createNotification(
+        post.getUser(),
+        admin,
+        NotificationType.POST_REJECTED,
+        "Bài đăng của bạn đã bị từ chối",
+        "Bài đăng \"" + post.getTitle() + "\" đã bị từ chối. Lý do: " + (reason != null ? reason : "Không có"),
+        "/post/" + postId,
+        Map.of("postId", postId, "reason", reason != null ? reason : "")
+    );
+
+    return mapToResponse(saved);
   }
 
   @Override

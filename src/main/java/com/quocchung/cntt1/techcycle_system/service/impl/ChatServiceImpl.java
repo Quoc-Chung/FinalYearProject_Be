@@ -1,5 +1,6 @@
 package com.quocchung.cntt1.techcycle_system.service.impl;
 import com.quocchung.cntt1.techcycle_system.config.MinioProperties;
+import com.quocchung.cntt1.techcycle_system.config.WebSocketEventListener;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ChatMessageRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ConversationResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.CreateConversationRequest;
@@ -11,8 +12,9 @@ import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.*;
 import com.quocchung.cntt1.techcycle_system.repository.*;
 import com.quocchung.cntt1.techcycle_system.service.ChatService;
-import com.quocchung.cntt1.techcycle_system.config.WebSocketEventListener;
+import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class ChatServiceImpl implements ChatService {
   private final UserRepository userRepository;
   private final WebSocketEventListener eventListener;
   private final MinioProperties minioProperties;
+  private final NotificationService notificationService;
 
   private String buildPublicUrl(String objectKey) {
     String base = minioProperties.getPublicEndpoint();
@@ -189,7 +192,42 @@ public class ChatServiceImpl implements ChatService {
 
     conversation.setLastMessageAt(LocalDateTime.now());
     conversationRepository.save(conversation);
+
+    sendChatNotification(conversation, sender, message);
+
     return ChatMessageResponse.fromEntityWithAttachments(message, attachments);
+  }
+
+  private void sendChatNotification(Conversation conversation, User sender, Message message) {
+    List<ConversationParticipant> participants = participantRepository
+        .findByConversationIdWithUser(conversation.getConversationId());
+
+    Map<String, Object> data = Map.of(
+        "conversationId", conversation.getConversationId(),
+        "messageId", message.getMessageId()
+    );
+
+    for (ConversationParticipant participant : participants) {
+      if (participant.getUser().getUserId().equals(sender.getUserId())) {
+        continue;
+      }
+
+      String preview = message.getContent() != null
+          ? (message.getContent().length() > 50
+              ? message.getContent().substring(0, 50) + "..."
+              : message.getContent())
+          : "Đã gửi tệp đính kèm";
+
+      notificationService.createNotification(
+          participant.getUser(),
+          sender,
+          NotificationType.CHAT_MESSAGE,
+          sender.getFullName() + " đã nhắn tin cho bạn",
+          preview,
+          "/messages?conversation=" + conversation.getConversationId(),
+          data
+      );
+    }
   }
 
   @Override

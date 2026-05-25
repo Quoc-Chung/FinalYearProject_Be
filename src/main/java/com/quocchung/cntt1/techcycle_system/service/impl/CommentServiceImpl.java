@@ -14,9 +14,12 @@ import com.quocchung.cntt1.techcycle_system.repository.CommentRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.service.CommentService;
+import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class CommentServiceImpl implements CommentService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final MinioProperties minioProperties;
+  private final NotificationService notificationService;
 
   @Override
   @Transactional
@@ -72,6 +76,23 @@ public class CommentServiceImpl implements CommentService {
             .build();
         commentImageRepository.save(image);
       }
+    }
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      String preview = request.getContent() != null && !request.getContent().isBlank()
+          ? (request.getContent().length() > 50
+              ? request.getContent().substring(0, 50) + "..."
+              : request.getContent())
+          : "Đã bình luận trên bài viết của bạn";
+      notificationService.createNotification(
+          post.getUser(),
+          user,
+          NotificationType.POST_COMMENTED,
+          user.getFullName() + " đã bình luận về bài viết của bạn",
+          preview,
+          "/post/" + post.getPostId(),
+          Map.of("postId", post.getPostId(), "commentId", comment.getCommentId())
+      );
     }
 
     return buildCommentResponse(comment, userId);
@@ -208,7 +229,30 @@ public class CommentServiceImpl implements CommentService {
           .build();
       commentReactionRepository.save(reaction);
       commentRepository.incrementLikesCount(commentId);
+
+      if (!comment.getUser().getUserId().equals(userId)) {
+        notificationService.createNotification(
+            comment.getUser(),
+            user,
+            NotificationType.COMMENT_REACTED,
+            user.getFullName() + " đã bày tỏ cảm xúc về bình luận của bạn",
+            user.getFullName() + " đã " + getReactionText(reactionType) + " bình luận của bạn",
+            "/post/" + comment.getPost().getPostId(),
+            Map.of("postId", comment.getPost().getPostId(), "commentId", commentId)
+        );
+      }
     }
+  }
+
+  private String getReactionText(ReactionType type) {
+    return switch (type) {
+      case LIKE -> "thích";
+      case LOVE -> "yêu thích";
+      case HAHA -> "haha";
+      case WOW -> "wow";
+      case SAD -> "buồn";
+      case ANGRY -> "giận";
+    };
   }
 
   @Override
