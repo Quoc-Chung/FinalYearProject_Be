@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -233,17 +234,17 @@ public class ChatServiceImpl implements ChatService {
   @Override
   @Transactional(readOnly = true)
   public Page<ChatMessageResponse> getMessages(Long conversationId, Long userId, Pageable pageable) {
-    if (!participantRepository.existsByConversationConversationIdAndUserUserId(conversationId, userId)) {
-      throw new ResException(ResErrorCode.CONVERSATION_FORBIDDEN);
+    if (userId != null) {
+      if (!participantRepository.existsByConversationConversationIdAndUserUserId(conversationId, userId)) {
+        throw new ResException(ResErrorCode.CONVERSATION_FORBIDDEN);
+      }
     }
-
     Page<Message> messages = messageRepository
         .findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
 
     List<Long> messageIds = messages.getContent().stream()
         .map(Message::getMessageId)
         .toList();
-
     Map<Long, List<AttachmentResponse>> attachmentMap = attachmentRepository
         .findByMessageIds(messageIds)
         .stream()
@@ -336,5 +337,175 @@ public class ChatServiceImpl implements ChatService {
       boolean isOnline = eventListener.isUserOnline(user.getUserId());
       return ChatContactResponse.fromUser(user, isOnline, lastMessageAt);
     });
+  }
+
+  // ========== ADMIN APIS ==========
+
+  @Override
+  @Transactional(readOnly = true)
+  public Page<ConversationResponse> getAllConversationsForAdmin(Pageable pageable) {
+    Page<Conversation> conversations = conversationRepository.findAllConversationsForAdmin(pageable);
+
+    return conversations.map(conv -> {
+      List<ConversationParticipant> participants = participantRepository
+          .findByConversationIdWithUser(conv.getConversationId());
+
+      ChatMessageResponse lastMessage = messageRepository
+          .findLastMessageByConversationId(conv.getConversationId())
+          .map(ChatMessageResponse::fromEntity)
+          .orElse(null);
+
+      return ConversationResponse.fromEntity(conv, participants, lastMessage);
+    });
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Page<ConversationResponse> getConversationsByAdminId(Long adminId, Pageable pageable) {
+    Page<Conversation> conversations = conversationRepository.findConversationsByAdminId(adminId, pageable);
+
+    return conversations.map(conv -> {
+      List<ConversationParticipant> participants = participantRepository
+          .findByConversationIdWithUser(conv.getConversationId());
+
+      ChatMessageResponse lastMessage = messageRepository
+          .findLastMessageByConversationId(conv.getConversationId())
+          .map(ChatMessageResponse::fromEntity)
+          .orElse(null);
+
+      return ConversationResponse.fromEntity(conv, participants, lastMessage);
+    });
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Page<ConversationResponse> getConversationsByAdminId(Long adminId, Pageable pageable, Set<Long> adminUserIds) {
+    Page<Conversation> conversations = conversationRepository.findConversationsByAdminId(adminId, pageable);
+
+    return conversations.map(conv -> {
+      List<ConversationParticipant> participants = participantRepository
+          .findByConversationIdWithUser(conv.getConversationId());
+
+      ChatMessageResponse lastMessage = messageRepository
+          .findLastMessageByConversationId(conv.getConversationId())
+          .map(ChatMessageResponse::fromEntity)
+          .orElse(null);
+
+      return ConversationResponse.fromEntityForAdmin(conv, participants, lastMessage, adminUserIds);
+    });
+  }
+
+  @Override
+  @Transactional
+  public ConversationResponse createConversationWithAdmin(Long userId, Long adminId) {
+    // Check if conversation already exists
+    Optional<Conversation> existingConversation = conversationRepository
+        .findDirectConversation(userId, adminId, 2);
+
+    if (existingConversation.isPresent()) {
+      Conversation conversation = existingConversation.get();
+      List<ConversationParticipant> participants = participantRepository
+          .findByConversationIdWithUser(conversation.getConversationId());
+      ChatMessageResponse lastMessage = messageRepository
+          .findLastMessageByConversationId(conversation.getConversationId())
+          .map(ChatMessageResponse::fromEntity)
+          .orElse(null);
+      return ConversationResponse.fromEntity(conversation, participants, lastMessage);
+    }
+
+    // Create new conversation
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+    User admin = userRepository.findById(adminId)
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+
+    Conversation conversation = Conversation.builder()
+        .createdBy(user)
+        .build();
+    conversation = conversationRepository.save(conversation);
+
+    // Add user as participant
+    ConversationParticipant userParticipant = ConversationParticipant.builder()
+        .conversation(conversation)
+        .user(user)
+        .isBlocked(false)
+        .build();
+    participantRepository.save(userParticipant);
+
+    // Add admin as participant
+    ConversationParticipant adminParticipant = ConversationParticipant.builder()
+        .conversation(conversation)
+        .user(admin)
+        .isBlocked(false)
+        .build();
+    participantRepository.save(adminParticipant);
+
+    List<ConversationParticipant> participants = participantRepository
+        .findByConversationIdWithUser(conversation.getConversationId());
+    return ConversationResponse.fromEntity(conversation, participants, null);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public long countUnreadConversationsForAdmin() {
+    // Count all unread messages across all conversations
+    return messageRepository.countUnreadMessagesForAdmin();
+  }
+
+  // ========== USER-TO-ADMIN IMPLEMENTATION ==========
+
+  @Override
+  @Transactional
+  public ConversationResponse getOrCreateAdminConversation(Long userId) {
+    // Find any admin user
+    List<User> admins = userRepository.findAllByRoleName("ADMIN");
+    if (admins.isEmpty()) {
+      throw new ResException(ResErrorCode.USER_NOT_FOUND);
+    }
+    User admin = admins.get(0);
+
+    // Check if conversation exists
+    Optional<Conversation> existingConversation = conversationRepository
+        .findDirectConversation(userId, admin.getUserId(), 2);
+
+    if (existingConversation.isPresent()) {
+      Conversation conversation = existingConversation.get();
+      List<ConversationParticipant> participants = participantRepository
+          .findByConversationIdWithUser(conversation.getConversationId());
+      ChatMessageResponse lastMessage = messageRepository
+          .findLastMessageByConversationId(conversation.getConversationId())
+          .map(ChatMessageResponse::fromEntity)
+          .orElse(null);
+      return ConversationResponse.fromEntity(conversation, participants, lastMessage);
+    }
+
+    // Create new conversation
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+
+    Conversation conversation = Conversation.builder()
+        .createdBy(user)
+        .build();
+    conversation = conversationRepository.save(conversation);
+
+    // Add user as participant
+    ConversationParticipant userParticipant = ConversationParticipant.builder()
+        .conversation(conversation)
+        .user(user)
+        .isBlocked(false)
+        .build();
+    participantRepository.save(userParticipant);
+
+    // Add admin as participant
+    ConversationParticipant adminParticipant = ConversationParticipant.builder()
+        .conversation(conversation)
+        .user(admin)
+        .isBlocked(false)
+        .build();
+    participantRepository.save(adminParticipant);
+
+    List<ConversationParticipant> participants = participantRepository
+        .findByConversationIdWithUser(conversation.getConversationId());
+    return ConversationResponse.fromEntity(conversation, participants, null);
   }
 }

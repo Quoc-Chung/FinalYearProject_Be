@@ -21,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.List;
 
 /**
  * Controller xử lý các tin nhắn WebSocket cho chức năng chat real-time.
@@ -47,8 +48,16 @@ public class ChatWebSocketController {
         conversationId,
         response
     );
+
+    // Send to specific conversation topic
     messagingTemplate.convertAndSend(
         "/topic/conversation." + conversationId,
+        response
+    );
+
+    // Also broadcast to admin topic for admin dashboard
+    messagingTemplate.convertAndSend(
+        "/topic/admin/messages",
         response
     );
   }

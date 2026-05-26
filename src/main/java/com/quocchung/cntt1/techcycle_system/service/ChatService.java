@@ -9,6 +9,8 @@ import com.quocchung.cntt1.techcycle_system.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Set;
+
 public interface ChatService {
 
   ConversationResponse createConversation(CreateConversationRequest request, Long creatorId);
@@ -38,4 +40,18 @@ public interface ChatService {
   ConversationResponse findConversationBetweenUsers(Long userId1, Long userId2);
 
   Page<ChatContactResponse> getChatContacts(Long userId, Pageable pageable);
+
+  // Admin APIs
+  Page<ConversationResponse> getAllConversationsForAdmin(Pageable pageable);
+
+  Page<ConversationResponse> getConversationsByAdminId(Long adminId, Pageable pageable);
+
+  Page<ConversationResponse> getConversationsByAdminId(Long adminId, Pageable pageable, Set<Long> adminUserIds);
+
+  ConversationResponse createConversationWithAdmin(Long userId, Long adminId);
+
+  long countUnreadConversationsForAdmin();
+
+  // User-to-Admin API
+  ConversationResponse getOrCreateAdminConversation(Long userId);
 }
