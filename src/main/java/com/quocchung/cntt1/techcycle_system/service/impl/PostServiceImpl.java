@@ -567,7 +567,7 @@ public class PostServiceImpl implements PostService {
 
   @Override
   public List<PostResponse> getLatestPosts() {
-    return postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED)
+    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
         .stream()
         .limit(20)
         .map(this::mapToResponse)
@@ -612,7 +612,7 @@ public class PostServiceImpl implements PostService {
 
   @Override
   public List<PostResponse> getLatestPosts(Long userId) {
-    return postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED)
+    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
         .stream()
         .limit(20)
         .map(post -> mapToResponse(post, userId))
@@ -783,7 +783,7 @@ public class PostServiceImpl implements PostService {
 
   @Override
   public List<PostResponse> hotPost() {
-    List<Post> approvedPosts = postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED);
+    List<Post> approvedPosts = postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED);
 
     if (approvedPosts.isEmpty()) {
       return List.of();
@@ -833,5 +833,50 @@ public class PostServiceImpl implements PostService {
     return posts.stream()
         .map(post -> mapToResponse(post, userId))
         .toList();
+  }
+
+  @Override
+  @Transactional
+  public PostResponse hidePost(Long postId, Long userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED);
+    }
+
+    post.setStatus(PostStatus.HIDDEN);
+    Post saved = postRepository.save(post);
+    return mapToResponse(saved, userId);
+  }
+
+  @Override
+  @Transactional
+  public PostResponse markAsSold(Long postId, Long userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED);
+    }
+
+    post.setStatus(PostStatus.SOLD);
+    Post saved = postRepository.save(post);
+    return mapToResponse(saved, userId);
+  }
+
+  @Override
+  @Transactional
+  public PostResponse unhidePost(Long postId, Long userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED);
+    }
+
+    post.setStatus(PostStatus.APPROVED);
+    Post saved = postRepository.save(post);
+    return mapToResponse(saved, userId);
   }
 }

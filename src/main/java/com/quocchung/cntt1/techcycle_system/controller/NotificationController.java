@@ -1,9 +1,12 @@
 package com.quocchung.cntt1.techcycle_system.controller;
 
+import com.quocchung.cntt1.techcycle_system.dtos.request.NotificationSettingRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Notification.NotificationResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Notification.NotificationSettingResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +19,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -94,5 +99,48 @@ public class NotificationController {
     return notificationService.markAsRead(notificationId, userPrincipal.getUserId())
         .map(notification -> ResponseEntity.ok(responseUtils.success(notification)))
         .orElse(ResponseEntity.notFound().build());
+  }
+
+  // ==================== Notification Settings ====================
+
+  @GetMapping("/settings")
+  public ResponseEntity<APIResponse<NotificationSettingResponse>> getNotificationSettings(
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    List<NotificationSettingResponse> settings = notificationService.getNotificationSettings(
+        userPrincipal.getUserId()
+    );
+    return ResponseEntity.ok(responseUtils.successList(settings));
+  }
+
+  @PutMapping("/settings")
+  public ResponseEntity<APIResponse<NotificationSettingResponse>> updateNotificationSetting(
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
+      @RequestBody NotificationSettingRequest request
+  ) {
+    NotificationSettingResponse setting = notificationService.updateNotificationSetting(
+        userPrincipal.getUserId(),
+        request.getType(),
+        request.getEnabled()
+    );
+    return ResponseEntity.ok(responseUtils.success(setting));
+  }
+
+  @PutMapping("/settings/batch")
+  public ResponseEntity<APIResponse<NotificationSettingResponse>> updateBatchNotificationSettings(
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
+      @RequestBody List<NotificationSettingRequest> settings
+  ) {
+    Map<NotificationType, Boolean> settingsMap = settings.stream()
+        .collect(Collectors.toMap(
+            NotificationSettingRequest::getType,
+            NotificationSettingRequest::getEnabled
+        ));
+
+    List<NotificationSettingResponse> results = notificationService.updateBatchNotificationSettings(
+        userPrincipal.getUserId(),
+        settingsMap
+    );
+    return ResponseEntity.ok(responseUtils.successList(results));
   }
 }

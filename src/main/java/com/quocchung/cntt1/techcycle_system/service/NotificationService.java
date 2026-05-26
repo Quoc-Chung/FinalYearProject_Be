@@ -1,12 +1,14 @@
 package com.quocchung.cntt1.techcycle_system.service;
 
 import com.quocchung.cntt1.techcycle_system.dtos.response.Notification.NotificationResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Notification.NotificationSettingResponse;
 import com.quocchung.cntt1.techcycle_system.model.Notification;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -35,4 +37,11 @@ public interface NotificationService {
   Optional<NotificationResponse> markAsRead(Long notificationId, Long userId);
 
   Page<NotificationResponse> getRecentNotifications(Long userId, int limit);
+
+  // Notification Settings
+  List<NotificationSettingResponse> getNotificationSettings(Long userId);
+
+  NotificationSettingResponse updateNotificationSetting(Long userId, NotificationType type, Boolean enabled);
+
+  List<NotificationSettingResponse> updateBatchNotificationSettings(Long userId, Map<NotificationType, Boolean> settings);
 }

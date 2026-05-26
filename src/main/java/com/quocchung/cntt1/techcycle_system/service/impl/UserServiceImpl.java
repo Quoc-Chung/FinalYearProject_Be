@@ -202,6 +202,7 @@ public class UserServiceImpl implements UserService {
     long countPost = postRepository.countByUserUserId(userId);
     long countUserFollow = userFollowRepository.countFollowersByUserId(userId);
     Double ratingScore = userReviewRepository.getAverageRatingByUserId(userId);
+    long reviewCount = userReviewRepository.countByToUserId(userId);
     Double userTrustScore = user.getTrustScore();
     Long trustScore = userTrustScore != null ? userTrustScore.longValue() : 0L;
 
@@ -210,6 +211,7 @@ public class UserServiceImpl implements UserService {
         .countPost(countPost)
         .countUserFollow(countUserFollow)
         .ratingScore(ratingScore != null ? ratingScore : 0.0)
+        .reviewCount(reviewCount)
         .build();
   }
 

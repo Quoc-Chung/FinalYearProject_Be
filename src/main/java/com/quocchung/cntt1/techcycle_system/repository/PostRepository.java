@@ -24,7 +24,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
   long countByUserUserId(Long userId);
 
 
-  List<Post> findByStatusOrderByCreatedAtDesc(PostStatus status);
+  List<Post> findByStatusOrderByCreatedAtAsc(PostStatus status);
 
   List<Post> findByUserUserIdAndStatus(Long userId, PostStatus status);
 

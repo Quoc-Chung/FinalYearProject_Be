@@ -1,8 +1,11 @@
 package com.quocchung.cntt1.techcycle_system.service.impl;
 
 import com.quocchung.cntt1.techcycle_system.dtos.response.Notification.NotificationResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Notification.NotificationSettingResponse;
 import com.quocchung.cntt1.techcycle_system.model.Notification;
+import com.quocchung.cntt1.techcycle_system.model.NotificationPreference;
 import com.quocchung.cntt1.techcycle_system.model.User;
+import com.quocchung.cntt1.techcycle_system.repository.NotificationPreferenceRepository;
 import com.quocchung.cntt1.techcycle_system.repository.NotificationRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.service.NotificationService;
@@ -15,9 +18,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -25,6 +27,7 @@ import java.util.Optional;
 public class NotificationServiceImpl implements NotificationService {
 
   private final NotificationRepository notificationRepository;
+  private final NotificationPreferenceRepository notificationPreferenceRepository;
   private final UserRepository userRepository;
   private final SimpMessagingTemplate messagingTemplate;
 
@@ -130,6 +133,97 @@ public class NotificationServiceImpl implements NotificationService {
         .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
     return notificationRepository.findByUserOrderByCreatedAtDesc(user, Pageable.ofSize(limit))
         .map(this::toResponse);
+  }
+
+  // ==================== Notification Settings ====================
+
+  @Override
+  public List<NotificationSettingResponse> getNotificationSettings(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+    List<NotificationPreference> preferences = notificationPreferenceRepository.findByUserUserId(userId);
+
+    // Convert existing preferences to response
+    Map<NotificationType, NotificationSettingResponse> responseMap = preferences.stream()
+        .collect(Collectors.toMap(
+            NotificationPreference::getNotificationType,
+            pref -> NotificationSettingResponse.builder()
+                .prefId(pref.getPrefId())
+                .type(pref.getNotificationType())
+                .enabled(pref.getInApp())
+                .build()
+        ));
+
+    // Return all notification types, default to enabled if not set
+    return Arrays.stream(NotificationType.values())
+        .map(type -> responseMap.computeIfAbsent(type, t ->
+            NotificationSettingResponse.builder()
+                .type(t)
+                .enabled(true) // Default enabled
+                .build()
+        ))
+        .collect(Collectors.toList());
+  }
+
+  @Override
+  @Transactional
+  public NotificationSettingResponse updateNotificationSetting(Long userId, NotificationType type, Boolean enabled) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+    NotificationPreference preference = notificationPreferenceRepository
+        .findByUserUserIdAndNotificationType(userId, type)
+        .orElseGet(() -> NotificationPreference.builder()
+            .user(user)
+            .notificationType(type)
+            .build());
+
+    preference.setInApp(enabled);
+    NotificationPreference saved = notificationPreferenceRepository.save(preference);
+
+    log.info("[NOTI-SETTINGS] Updated notification setting for user {}: type={}, enabled={}",
+        userId, type, enabled);
+
+    return NotificationSettingResponse.builder()
+        .prefId(saved.getPrefId())
+        .type(saved.getNotificationType())
+        .enabled(saved.getInApp())
+        .build();
+  }
+
+  @Override
+  @Transactional
+  public List<NotificationSettingResponse> updateBatchNotificationSettings(
+      Long userId, Map<NotificationType, Boolean> settings
+  ) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+    List<NotificationSettingResponse> results = new ArrayList<>();
+
+    for (Map.Entry<NotificationType, Boolean> entry : settings.entrySet()) {
+      NotificationPreference preference = notificationPreferenceRepository
+          .findByUserUserIdAndNotificationType(userId, entry.getKey())
+          .orElseGet(() -> NotificationPreference.builder()
+              .user(user)
+              .notificationType(entry.getKey())
+              .build());
+
+      preference.setInApp(entry.getValue());
+      NotificationPreference saved = notificationPreferenceRepository.save(preference);
+
+      results.add(NotificationSettingResponse.builder()
+          .prefId(saved.getPrefId())
+          .type(saved.getNotificationType())
+          .enabled(saved.getInApp())
+          .build());
+    }
+
+    log.info("[NOTI-SETTINGS] Batch updated {} notification settings for user {}",
+        settings.size(), userId);
+
+    return results;
   }
 
   private NotificationResponse toResponse(Notification notification) {

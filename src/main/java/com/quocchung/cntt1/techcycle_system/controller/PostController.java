@@ -209,4 +209,31 @@ public class PostController {
         result.getContent(), result.getNumber() + 1, result.getTotalElements(), result.getSize()));
   }
 
+  @PutMapping("/hide/{id}")
+  public ResponseEntity<APIResponse<PostResponse>> hidePost(
+      @PathVariable Long id,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    return ResponseEntity.ok(responseUtils.success(
+        postService.hidePost(id, userPrincipal.getUserId())));
+  }
+
+  @PutMapping("/sold/{id}")
+  public ResponseEntity<APIResponse<PostResponse>> markAsSold(
+      @PathVariable Long id,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    return ResponseEntity.ok(responseUtils.success(
+        postService.markAsSold(id, userPrincipal.getUserId())));
+  }
+
+  @PutMapping("/unhide/{id}")
+  public ResponseEntity<APIResponse<PostResponse>> unhidePost(
+      @PathVariable Long id,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    return ResponseEntity.ok(responseUtils.success(
+        postService.unhidePost(id, userPrincipal.getUserId())));
+  }
+
 }

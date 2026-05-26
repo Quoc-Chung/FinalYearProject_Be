@@ -19,4 +19,7 @@ public class UserMetadataResponse {
 
    // điểm đánh giá
    private Double ratingScore;
+
+   // số lượt đánh giá
+   private Long reviewCount;
 }
