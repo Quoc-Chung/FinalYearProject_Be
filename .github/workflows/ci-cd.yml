@@ -46,7 +46,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Dùng lại JAR từ job build, không build lại
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
@@ -97,17 +96,21 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            set -e  # Dừng ngay nếu có lỗi
+            set -e
             cd ~/techcycle
 
             echo "Pulling image mới nhất..."
             docker pull quocchung/techcycle-backend:latest
 
-            echo "Khởi động lại container backend..."
-            docker-compose up -d --no-deps --force-recreate backend
+            echo "Xóa container backend cũ..."
+            docker compose stop backend
+            docker compose rm -f backend
+
+            echo "Khởi động lại backend..."
+            docker compose up -d --no-deps backend
 
             echo "Dọn image cũ..."
             docker image prune -f
 
-            echo "Kiểm tra container đang chạy:"
+            echo "Kiểm tra:"
             docker ps | grep techcycle-backend && echo "✅ Deploy thành công!" || (echo "❌ Container không chạy!" && exit 1)
