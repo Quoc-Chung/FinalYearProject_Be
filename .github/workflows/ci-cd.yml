@@ -12,9 +12,13 @@ env:
   DOCKERHUB_IMAGE: quocchung/techcycle-backend
 
 jobs:
+  # ─────────────────────────────
+  # BUILD
+  # ─────────────────────────────
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,15 +38,15 @@ jobs:
         with:
           name: app-jar
           path: target/*.jar
-          retention-days: 1
 
+  # ─────────────────────────────
+  # DOCKER BUILD & PUSH
+  # ─────────────────────────────
   docker:
     name: Docker Build & Push
     runs-on: ubuntu-latest
     needs: build
-    if: >
-      (github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,7 +70,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels)
+      - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -75,7 +79,7 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=sha-
 
-      - name: Build and push Docker image
+      - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -85,13 +89,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ─────────────────────────────
+  # DEPLOY (FIXED)
+  # ─────────────────────────────
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
     needs: docker
-    if: >
-      (github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -100,10 +105,29 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
+
           script: |
+            set -e
+
+            echo "➡️ Move to project folder"
             cd ~/techcycle
+
+            echo "➡️ Pull latest image"
             docker pull quocchung/techcycle-backend:latest
-            docker-compose up -d --no-deps --force-recreate backend
+
+            echo "➡️ Stop old container (safe)"
+            docker-compose down --remove-orphans || true
+
+            echo "➡️ Remove dangling containers"
+            docker rm -f techcycle-backend || true
+
+            echo "➡️ Start new container"
+            docker-compose up -d --force-recreate
+
+            echo "➡️ Cleanup images"
             docker image prune -f
-            docker ps | grep techcycle-backend
-            echo "Deploy thanh cong!"
+
+            echo "➡️ Show running containers"
+            docker ps
+
+            echo "✅ Deploy SUCCESS"

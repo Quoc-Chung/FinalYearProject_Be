@@ -36,10 +36,8 @@ services:
       - FRONTEND_URL=${FRONTEND_URL}
       - FRONTEND_RESET_PASSWORD_URL=${FRONTEND_RESET_PASSWORD_URL}
     depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
+      - mysql
+      - redis
     networks:
       - techcycle-net
 
