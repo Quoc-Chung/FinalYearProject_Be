@@ -80,6 +80,17 @@ services:
     command: server /data --console-address ":9001"
     networks:
       - techcycle-net
+  frontend:
+    image: quocchung/techcycle-frontend:latest
+    container_name: techcycle-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - techcycle-net
 
 volumes:
   mysql_data:
