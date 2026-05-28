@@ -76,4 +76,10 @@ public interface PostService {
   List<PostResponse> hotPost();
 
   List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status);
+
+  PostResponse hidePost(Long postId, Long userId);
+
+  PostResponse markAsSold(Long postId, Long userId);
+
+  PostResponse unhidePost(Long postId, Long userId);
 }

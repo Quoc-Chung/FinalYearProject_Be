@@ -188,12 +188,15 @@ public class TabHomeServiceImpl implements TabHomeService {
     List<SuggestedSellerResponse> sellers = candidates.stream().map(user -> {
       long countPost = postRepository.countByUserUserId(user.getUserId());
       long countFollow = userFollowRepository.countFollowersByUserId(user.getUserId());
+      boolean isFollowing = userFollowRepository
+          .existsByFollowerUserIdAndFollowingUserId(userId, user.getUserId());
       return SuggestedSellerResponse.builder()
           .userId(user.getUserId())
           .fullName(user.getFullName() != null ? user.getFullName() : user.getEmail())
           .countPost(String.valueOf(countPost))
           .countFlow(String.valueOf(countFollow))
           .avatarUrl(user.getAvatarUrl())
+          .isFollowing(isFollowing)
           .build();
     }).collect(Collectors.toList());
 

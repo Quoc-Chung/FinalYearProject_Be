@@ -17,6 +17,12 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, Long> {
 
   boolean existsByFollowerAndFollowing(User follower, User following);
 
+  @Query("SELECT CASE WHEN COUNT(uf) > 0 THEN true ELSE false END FROM UserFollow uf " +
+         "WHERE uf.follower.userId = :followerId AND uf.following.userId = :followingId")
+  boolean existsByFollowerUserIdAndFollowingUserId(
+      @Param("followerId") Long followerId,
+      @Param("followingId") Long followingId);
+
   @Query("SELECT COUNT(uf) FROM UserFollow uf WHERE uf.following.userId = :userId")
   long countFollowersByUserId(@Param("userId") Long userId);
 
@@ -28,4 +34,8 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, Long> {
 
   @Query("SELECT uf FROM UserFollow uf JOIN FETCH uf.follower WHERE uf.following.userId = :userId")
   Page<UserFollow> findFollowersByFollowingId(@Param("userId") Long userId, Pageable pageable);
+
+  Optional<UserFollow> findByFollowerUserIdAndFollowingUserId(Long followerId, Long followingId);
+
+  void deleteByFollowerUserIdAndFollowingUserId(Long followerId, Long followingId);
 }

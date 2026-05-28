@@ -17,5 +17,5 @@ public class SuggestedSellerResponse {
   private String countPost; // Số bài viết
   private String countFlow; // số người theo dõi
   private String avatarUrl;
-
+  private Boolean isFollowing; // true = đã theo dõi, false = chưa theo dõi
 }

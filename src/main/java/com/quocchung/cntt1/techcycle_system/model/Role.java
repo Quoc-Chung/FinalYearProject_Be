@@ -14,7 +14,7 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-//ADMIN , USER , ADMINISTRATOR
+//ADMIN , USER
 public class Role {
 
   @Id

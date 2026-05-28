@@ -32,7 +32,9 @@ import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
 import com.quocchung.cntt1.techcycle_system.service.PostService;
+import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType;
 import java.time.LocalDateTime;
@@ -66,6 +68,7 @@ public class PostServiceImpl implements PostService {
   private final UserFollowRepository userFollowRepository;
   private final UserReviewRepository userReviewRepository;
   private final CommentRepository commentRepository;
+  private final NotificationService notificationService;
 
   private String buildPublicUrl(String objectKey) {
     String base = minioProperties.getPublicEndpoint();
@@ -515,7 +518,20 @@ public class PostServiceImpl implements PostService {
     post.setApprovedAt(LocalDateTime.now());
     post.setRejectedReason(null);
 
-    return mapToResponse(postRepository.save(post));
+    Post saved = postRepository.save(post);
+
+    User admin = userRepository.findById(adminId).orElse(null);
+    notificationService.createNotification(
+        post.getUser(),
+        admin,
+        NotificationType.POST_APPROVED,
+        "Bài đăng của bạn đã được duyệt",
+        "Bài đăng \"" + post.getTitle() + "\" đã được duyệt và hiển thị công khai",
+        "/post/" + postId,
+        Map.of("postId", postId)
+    );
+
+    return mapToResponse(saved);
   }
 
   @Override
@@ -533,12 +549,25 @@ public class PostServiceImpl implements PostService {
     post.setApprovedAt(LocalDateTime.now());
     post.setRejectedReason(reason);
 
-    return mapToResponse(postRepository.save(post));
+    Post saved = postRepository.save(post);
+
+    User admin = userRepository.findById(adminId).orElse(null);
+    notificationService.createNotification(
+        post.getUser(),
+        admin,
+        NotificationType.POST_REJECTED,
+        "Bài đăng của bạn đã bị từ chối",
+        "Bài đăng \"" + post.getTitle() + "\" đã bị từ chối. Lý do: " + (reason != null ? reason : "Không có"),
+        "/post/" + postId,
+        Map.of("postId", postId, "reason", reason != null ? reason : "")
+    );
+
+    return mapToResponse(saved);
   }
 
   @Override
   public List<PostResponse> getLatestPosts() {
-    return postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED)
+    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
         .stream()
         .limit(20)
         .map(this::mapToResponse)
@@ -583,7 +612,7 @@ public class PostServiceImpl implements PostService {
 
   @Override
   public List<PostResponse> getLatestPosts(Long userId) {
-    return postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED)
+    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
         .stream()
         .limit(20)
         .map(post -> mapToResponse(post, userId))
@@ -735,11 +764,9 @@ public class PostServiceImpl implements PostService {
     if (avatarUrl != null && !avatarUrl.startsWith("http")) {
       avatarUrl = buildPublicUrl(avatarUrl);
     }
-
     String addressLine = post.getAddress() != null ? (post.getAddress().getWard() + ", "+ post.getAddress().getProvince() ): null;
-
-
     return PostDetailUser.builder()
+        .userId(author.getUserId())
         .username(author.getFullName())
         .email(author.getEmail())
         .createDate(author.getCreatedAt() != null ? author.getCreatedAt().toString() : null)
@@ -756,7 +783,7 @@ public class PostServiceImpl implements PostService {
 
   @Override
   public List<PostResponse> hotPost() {
-    List<Post> approvedPosts = postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.APPROVED);
+    List<Post> approvedPosts = postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED);
 
     if (approvedPosts.isEmpty()) {
       return List.of();
@@ -790,7 +817,6 @@ public class PostServiceImpl implements PostService {
         })
         .limit(20)
         .toList();
-
     return hotPosts.stream()
         .map(post -> mapToResponse(post))
         .toList();
@@ -807,5 +833,50 @@ public class PostServiceImpl implements PostService {
     return posts.stream()
         .map(post -> mapToResponse(post, userId))
         .toList();
+  }
+
+  @Override
+  @Transactional
+  public PostResponse hidePost(Long postId, Long userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED);
+    }
+
+    post.setStatus(PostStatus.HIDDEN);
+    Post saved = postRepository.save(post);
+    return mapToResponse(saved, userId);
+  }
+
+  @Override
+  @Transactional
+  public PostResponse markAsSold(Long postId, Long userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED);
+    }
+
+    post.setStatus(PostStatus.SOLD);
+    Post saved = postRepository.save(post);
+    return mapToResponse(saved, userId);
+  }
+
+  @Override
+  @Transactional
+  public PostResponse unhidePost(Long postId, Long userId) {
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
+
+    if (!post.getUser().getUserId().equals(userId)) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED);
+    }
+
+    post.setStatus(PostStatus.APPROVED);
+    Post saved = postRepository.save(post);
+    return mapToResponse(saved, userId);
   }
 }

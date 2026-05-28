@@ -21,27 +21,24 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/userfllow")
+@RequestMapping("/api/user-reviews")
 @RequiredArgsConstructor
 public class UserReviewController {
 
   private final UserReviewService userReviewService;
   private final ResponseUtils responseUtils;
 
-  // Đánh giá một người dùng
   @PostMapping("/review/{toUserId}")
   public ResponseEntity<APIResponse<ReviewResponse>> reviewUser(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
       @PathVariable Long toUserId,
       @Valid @RequestBody ReviewRequest request) {
-    ReviewResponse result = userReviewService.reviewUser(userPrincipal.getUserId(), toUserId,
-        request);
+    ReviewResponse result = userReviewService.reviewUser(userPrincipal.getUserId(), toUserId, request);
     return ResponseEntity.ok(responseUtils.success(result));
   }
 
-  // Lấy danh sách đánh giá của mình
-  @GetMapping("/reviews")
-  public ResponseEntity<APIResponse<ReviewResponse>> getReviews(
+  @GetMapping("/me")
+  public ResponseEntity<APIResponse<ReviewResponse>> getMyReviews(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
       @RequestParam(defaultValue = "1") int page,
       @RequestParam(defaultValue = "10") int size) {

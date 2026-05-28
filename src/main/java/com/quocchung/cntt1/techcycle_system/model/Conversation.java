@@ -9,7 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 @Table(
     name = "conversations",
     indexes = {
-      @Index(name = "idx_conversation_post", columnList = "post_id"),
       @Index(name = "idx_conversation_last_message_at", columnList = "last_message_at")
     })
 @Getter
@@ -25,10 +24,6 @@ public class Conversation {
   private Long conversationId;
 
   @ManyToOne
-  @JoinColumn(name = "post_id")
-  private Post post;
-
-  @ManyToOne
   @JoinColumn(name = "created_by", nullable = false)
   private User createdBy;
 
@@ -38,4 +33,5 @@ public class Conversation {
   @CreationTimestamp
   @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
+
 }

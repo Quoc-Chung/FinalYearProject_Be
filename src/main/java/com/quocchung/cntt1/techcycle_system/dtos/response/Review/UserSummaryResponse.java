@@ -14,4 +14,7 @@ public class UserSummaryResponse {
   private String fullName;
   private String avatarUrl;
   private Double trustScore;
+  private Long postCount;
+  private Long followerCount;
+  private Long followingCount;
 }

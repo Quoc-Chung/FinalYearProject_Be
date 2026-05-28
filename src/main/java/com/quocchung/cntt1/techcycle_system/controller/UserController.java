@@ -6,8 +6,8 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserMetadataRespo
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserSearchResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
-import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
-import com.quocchung.cntt1.techcycle_system.exception.ResException;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Seller.SellerProfileResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.TrustScoreResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.PageResponseUtil;
@@ -16,15 +16,14 @@ import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
 import com.quocchung.cntt1.techcycle_system.utils.response.PageResponse;
 import com.quocchung.cntt1.techcycle_system.utils.response.ResponseStatus;
 import jakarta.validation.Valid;
-import java.security.Principal;
 import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,9 +42,7 @@ public class UserController {
       @AuthenticationPrincipal UserPrincipal userPrincipal,
       @Valid @ModelAttribute UserRequest request
   ) {
-
     UserResponse data = userService.updateMe(userPrincipal.getEmail(), request);
-
     APIResponse<UserResponse> response = new APIResponse<>();
     response.setStatus(ResponseStatus.SUCCESS_STATUS);
     response.setData(Collections.singletonList(data));
@@ -55,13 +52,12 @@ public class UserController {
   }
 
   @PostMapping("/update-status/{userId}")
-  @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+  @PreAuthorize("hasAnyRole( 'ADMIN')")
   public APIResponse<Void> updateUserStatus(
       @PathVariable Long userId,
       @Valid @RequestBody UpdateUserStatusRequest request
   ) {
     userService.updateUserStatus(userId, request);
-
     APIResponse<Void> response = new APIResponse<>();
     response.setStatus(ResponseStatus.SUCCESS_STATUS);
     response.setData(null);
@@ -71,7 +67,7 @@ public class UserController {
   }
 
   @GetMapping("/search")
-  @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'ADMIN')")
+  @PreAuthorize("hasAnyRole( 'ADMIN')")
   public APIResponse<UserResponse> searchUsers(
       @RequestParam(required = false) String searchText,
       @RequestParam(required = false) String status,
@@ -86,7 +82,6 @@ public class UserController {
         .build();
 
     UserSearchResponse searchResult = userService.searchUsers(request);
-
     PageResponse pageInfo = PageResponseUtil.buildPageMetadata(
         page.longValue(),
         size.longValue(),
@@ -110,5 +105,15 @@ public class UserController {
     return responseUtils.success(userMetadataResponse);
   }
 
+  @GetMapping("/seller/{userId}")
+  public APIResponse<SellerProfileResponse> getSellerProfile(@PathVariable Long userId) {
+    SellerProfileResponse sellerProfile = userService.getSellerProfile(userId);
+    return responseUtils.success(sellerProfile);
+  }
 
+  @GetMapping("/trust-score/{userId}")
+  public APIResponse<TrustScoreResponse> getTrustScore(@PathVariable Long userId) {
+    TrustScoreResponse trustScore = userService.getTrustScore(userId);
+    return responseUtils.success(trustScore);
+  }
 }

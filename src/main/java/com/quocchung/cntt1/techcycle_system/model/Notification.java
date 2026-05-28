@@ -26,40 +26,42 @@ public class Notification {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "notification_id", updatable = false, nullable = false)
   private Long notificationId;
 
+  // Người nhận email
   @ManyToOne
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
+  @ManyToOne
+  @JoinColumn(name = "actor_id")
+  private User actor;
+
+  // Loại thong bao
   @Enumerated(EnumType.STRING)
-  @Column(name = "type", nullable = false, length = 50)
+  @Column(nullable = false, length = 50)
   private NotificationType type;
 
-  @Column(name = "title", nullable = false, length = 255)
+  // Tieu de
   private String title;
 
-  @Column(name = "content", columnDefinition = "TEXT")
+  // Noi dung
+  @Column(columnDefinition = "TEXT")
   private String content;
 
+  // duong dan khi nhan vao no se chuyen tiep den
+  @Column(name = "target_url")
+  private String targetUrl;
+
+  // data kem thong bao
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "data", columnDefinition = "json")
+  @Column(columnDefinition = "json")
   private Map<String, Object> data;
 
-  @Builder.Default
-  @Column(name = "is_read", nullable = false)
+  // da doc thong bao chua
+  @Column(nullable = false)
   private Boolean isRead = false;
 
-  @Builder.Default
-  @Column(name = "is_sent_email", nullable = false)
-  private Boolean isSentEmail = false;
-
-  @Builder.Default
-  @Column(name = "is_sent_push", nullable = false)
-  private Boolean isSentPush = false;
-
   @CreationTimestamp
-  @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
 }
