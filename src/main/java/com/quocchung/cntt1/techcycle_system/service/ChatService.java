@@ -3,19 +3,17 @@ package com.quocchung.cntt1.techcycle_system.service;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ChatMessageRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.ConversationResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Chat.CreateConversationRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Chat.ChatContactResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Chat.ChatMessageResponse;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
+import java.util.Set;
 
 public interface ChatService {
 
-  ConversationResponse createConversation(
-      CreateConversationRequest request,
-      User creator
-  );
+  ConversationResponse createConversation(CreateConversationRequest request, Long creatorId);
 
   Page<ConversationResponse> getConversations(Long userId, Pageable pageable);
 
@@ -39,11 +37,21 @@ public interface ChatService {
 
   long getUnreadCount(Long conversationId, Long userId);
 
-  List<ConversationResponse.UserSummary> getConversationParticipants(Long conversationId);
+  ConversationResponse findConversationBetweenUsers(Long userId1, Long userId2);
 
-  void addParticipant(Long conversationId, Long userId, User admin);
+  Page<ChatContactResponse> getChatContacts(Long userId, Pageable pageable);
 
-  void removeParticipant(Long conversationId, Long userId, User admin);
+  // Admin APIs
+  Page<ConversationResponse> getAllConversationsForAdmin(Pageable pageable);
 
-  void leaveConversation(Long conversationId, User user);
+  Page<ConversationResponse> getConversationsByAdminId(Long adminId, Pageable pageable);
+
+  Page<ConversationResponse> getConversationsByAdminId(Long adminId, Pageable pageable, Set<Long> adminUserIds);
+
+  ConversationResponse createConversationWithAdmin(Long userId, Long adminId);
+
+  long countUnreadConversationsForAdmin();
+
+  // User-to-Admin API
+  ConversationResponse getOrCreateAdminConversation(Long userId);
 }

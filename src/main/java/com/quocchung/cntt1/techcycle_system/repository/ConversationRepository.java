@@ -1,7 +1,6 @@
 package com.quocchung.cntt1.techcycle_system.repository;
 
 import com.quocchung.cntt1.techcycle_system.model.Conversation;
-import com.quocchung.cntt1.techcycle_system.model.ConversationParticipant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -14,15 +13,38 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
+  /**
+   * Lấy danh sách người dùng đã từng nhắn tin với userId, sắp xếp theo thời gian tin nhắn cuối cùng.
+   * Loại trừ chính userId ra khỏi kết quả.
+   *
+   * @param userId ID của người dùng hiện tại
+   * @param pageable Thông tin phân trang
+   * @return Danh sách Object[] chứa [User, lastMessageAt]
+   */
+  @Query("""
+      SELECT m.sender, MAX(m.createdAt) as lastMessageAt
+      FROM Message m
+      INNER JOIN ConversationParticipant cp ON cp.conversation = m.conversation
+      WHERE cp.user.userId = :userId
+        AND m.sender.userId != :userId
+      GROUP BY m.sender.userId
+      ORDER BY lastMessageAt DESC
+      """)
+  Page<Object[]> findChatContactsByUserId(@Param("userId") Long userId, Pageable pageable);
+
+  /**
+   * Tìm cuộc trò chuyện theo ID kèm thông tin người tạo.
+   */
   @Query("SELECT c FROM Conversation c " +
-         "LEFT JOIN FETCH c.post " +
          "LEFT JOIN FETCH c.createdBy " +
          "WHERE c.conversationId = :id")
   Optional<Conversation> findByIdWithDetails(@Param("id") Long id);
 
+  /**
+   * Tìm tất cả cuộc trò chuyện của một người dùng, sắp xếp theo thời gian tin nhắn cuối.
+   */
   @Query("SELECT c FROM Conversation c " +
          "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
-         "LEFT JOIN FETCH c.post " +
          "LEFT JOIN FETCH c.createdBy " +
          "WHERE cp.user.userId = :userId " +
          "ORDER BY c.lastMessageAt DESC NULLS LAST")
@@ -31,20 +53,11 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
       Pageable pageable
   );
 
+  /**
+   * Tìm cuộc trò chuyện trực tiếp giữa 2 người dùng (chat 1-1).
+   */
   @Query("SELECT c FROM Conversation c " +
-         "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
-         "WHERE cp.user.userId = :userId " +
-         "AND c.post.postId = :postId " +
-         "AND cp.user.userId != :creatorId")
-  Optional<Conversation> findExistingConversation(
-      @Param("userId") Long userId,
-      @Param("postId") Long postId,
-      @Param("creatorId") Long creatorId
-  );
-
-  @Query("SELECT c FROM Conversation c " +
-         "WHERE c.post IS NULL " +
-         "AND (SELECT COUNT(cp) FROM ConversationParticipant cp WHERE cp.conversation = c) = :size " +
+         "WHERE (SELECT COUNT(cp) FROM ConversationParticipant cp WHERE cp.conversation = c) = :size " +
          "AND :userId1 IN (SELECT cp1.user.userId FROM ConversationParticipant cp1 WHERE cp1.conversation = c) " +
          "AND :userId2 IN (SELECT cp2.user.userId FROM ConversationParticipant cp2 WHERE cp2.conversation = c)")
   Optional<Conversation> findDirectConversation(
@@ -53,14 +66,61 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
       @Param("size") int size
   );
 
+  /**
+   * Tìm tất cả cuộc trò chuyện của một người dùng.
+   */
   @Query("SELECT DISTINCT c FROM Conversation c " +
          "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
          "WHERE cp.user.userId = :userId")
   List<Conversation> findAllByParticipantUserId(@Param("userId") Long userId);
 
+  /**
+   * Tìm cuộc trò chuyện theo danh sách ID kèm thông tin người tạo.
+   */
   @Query("SELECT c FROM Conversation c " +
-         "LEFT JOIN FETCH c.post " +
          "LEFT JOIN FETCH c.createdBy " +
          "WHERE c.conversationId IN :ids")
   List<Conversation> findAllByIdsWithDetails(@Param("ids") List<Long> ids);
+
+  @Query("SELECT COUNT(DISTINCT c) FROM Conversation c " +
+         "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
+         "WHERE cp.user.userId = :userId")
+  long countByParticipantUserId(@Param("userId") Long userId);
+
+  /**
+   * Lấy tất cả cuộc trò chuyện cho admin, sắp xếp theo thời gian tin nhắn cuối.
+   * Chỉ lấy các cuộc trò chuyện giữa user và admin.
+   */
+  @Query("SELECT DISTINCT c FROM Conversation c " +
+         "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
+         "INNER JOIN cp.user u " +
+         "INNER JOIN UserRole ur ON ur.user = u " +
+         "INNER JOIN ur.role r " +
+         "WHERE r.name = 'ADMIN' " +
+         "ORDER BY c.lastMessageAt DESC NULLS LAST")
+  Page<Conversation> findAllConversationsForAdmin(Pageable pageable);
+
+  /**
+   * Lấy tất cả cuộc trò chuyện của một admin cụ thể.
+   * Chỉ lấy các cuộc trò chuyện giữa user và admin đó (loại bỏ admin-admin).
+   */
+  @Query("SELECT DISTINCT c FROM Conversation c " +
+         "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
+         "WHERE cp.user.userId = :adminId " +
+         "AND EXISTS (SELECT cp2 FROM ConversationParticipant cp2 " +
+         "            WHERE cp2.conversation = c " +
+         "            AND cp2.user.userId != :adminId) " +
+         "ORDER BY c.lastMessageAt DESC NULLS LAST")
+  Page<Conversation> findConversationsByAdminId(@Param("adminId") Long adminId, Pageable pageable);
+
+  /**
+   * Đếm số cuộc trò chuyện có tin nhắn chưa đọc cho admin.
+   */
+  @Query("SELECT COUNT(DISTINCT m.conversation.conversationId) FROM Message m " +
+         "WHERE m.isRead = false " +
+         "AND m.sender.userId != :adminId " +
+         "AND EXISTS (SELECT cp FROM ConversationParticipant cp " +
+         "            WHERE cp.conversation = m.conversation " +
+         "            AND cp.user.userId = :adminId)")
+  long countUnreadConversationsForAdmin(@Param("adminId") Long adminId);
 }

@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  backend:
+    image: quocchung/techcycle-backend:latest
+    container_name: techcycle-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      - DB_URL=jdbc:mysql://mysql:3306/techcycle_system?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD}
+      # Mail
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      # Google OAuth2
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # Facebook OAuth2
+      - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # JWT
+      - JWT_SECRET=${JWT_SECRET}
+      # MinIO
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_PUBLIC_ENDPOINT=http://62.171.174.204:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      # Frontend
+      - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_RESET_PASSWORD_URL=${FRONTEND_RESET_PASSWORD_URL}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - techcycle-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: techcycle-mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=techcycle_system
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - techcycle-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: techcycle-redis
+    restart: always
+    networks:
+      - techcycle-net
+
+  minio:
+    image: minio/minio
+    container_name: techcycle-minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - techcycle-net
+
+volumes:
+  mysql_data:
+  minio_data:
+
+networks:
+  techcycle-net:
+    driver: bridge

@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -15,9 +13,5 @@ import java.util.List;
 public class CreateConversationRequest {
 
   @NotNull
-  private Long postId;
-
-  private List<Long> participantIds;
-
-  private String initialMessage;
+  private Long participantId;
 }

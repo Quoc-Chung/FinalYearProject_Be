@@ -1,5 +1,6 @@
 package com.quocchung.cntt1.techcycle_system.dtos.request.Chat;
 
+import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MessageType;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -35,5 +36,6 @@ public class ChatMessageRequest {
     private String mimeType;
     private Long fileSize;
     private Integer durationSeconds;
+    private MediaType mediaType;
   }
 }

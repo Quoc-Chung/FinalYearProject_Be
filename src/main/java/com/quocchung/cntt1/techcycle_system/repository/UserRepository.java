@@ -23,5 +23,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
   @Query("SELECT DISTINCT u FROM User u JOIN UserRole ur ON ur.user = u JOIN Role r ON ur.role = r WHERE r.name = :roleName")
   List<User> findAllByRoleName(@Param("roleName") String roleName);
 
-  
+  @Query("SELECT CASE WHEN COUNT(ur) > 0 THEN true ELSE false END FROM UserRole ur " +
+         "JOIN Role r ON ur.role = r WHERE ur.user.userId = :userId AND r.name = :roleName")
+  boolean hasRole(@Param("userId") Long userId, @Param("roleName") String roleName);
+
+  @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL ORDER BY u.createdAt DESC")
+  List<User> findRecentUsers(org.springframework.data.domain.Pageable pageable);
 }

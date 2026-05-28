@@ -4,6 +4,7 @@ import com.quocchung.cntt1.techcycle_system.dtos.request.Reaction.ReactionReques
 import com.quocchung.cntt1.techcycle_system.dtos.response.Reaction.PostReactionReportResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Reaction.ReactionResponse;
 import java.util.List;
+import java.util.Map;
 
 public interface ReactionService {
 
@@ -18,4 +19,6 @@ public interface ReactionService {
   List<ReactionResponse> getUserReactions(Long userId);
 
   PostReactionReportResponse getPostReactionReport(Long postId);
+
+  Map<Long, Map<String, Object>> getReactionsCountsForPosts(List<Long> postIds);
 }

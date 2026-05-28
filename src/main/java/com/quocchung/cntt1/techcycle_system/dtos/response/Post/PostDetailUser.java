@@ -9,7 +9,7 @@ import java.util.*;
 @AllArgsConstructor
 @Builder
 public class PostDetailUser {
-
+  private Long userId;
   private String username;
   private String email;
   private String createDate;  // ngay tham gia

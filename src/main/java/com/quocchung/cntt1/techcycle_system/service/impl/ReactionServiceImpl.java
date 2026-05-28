@@ -14,7 +14,9 @@ import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostReactionRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
+import com.quocchung.cntt1.techcycle_system.service.NotificationService;
 import com.quocchung.cntt1.techcycle_system.service.ReactionService;
+import com.quocchung.cntt1.techcycle_system.utils.enums.NotificationType;
 import com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +34,7 @@ public class ReactionServiceImpl implements ReactionService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final AddressRepository addressRepository;
+  private final NotificationService notificationService;
 
   @Override
   @Transactional
@@ -57,11 +60,34 @@ public class ReactionServiceImpl implements ReactionService {
 
     PostReaction saved = postReactionRepository.save(reaction);
 
+    if (!post.getUser().getUserId().equals(userId)) {
+      notificationService.createNotification(
+          post.getUser(),
+          user,
+          NotificationType.POST_REACTED,
+          user.getFullName() + " đã bày tỏ cảm xúc về bài viết của bạn",
+          user.getFullName() + " đã " + getReactionText(request.getReactionType()) + " bài viết của bạn",
+          "/post/" + postId,
+          Map.of("postId", postId)
+      );
+    }
+
     return mapToResponse(saved, postId, currentUserId -> {
       Optional<PostReaction> userReaction = postReactionRepository
           .findByPostPostIdAndUserUserId(postId, currentUserId);
       return userReaction.map(PostReaction::getReactionType).orElse(null);
     }, userId);
+  }
+
+  private String getReactionText(ReactionType type) {
+    return switch (type) {
+      case LIKE -> "thích";
+      case LOVE -> "yêu thích";
+      case HAHA -> "haha";
+      case WOW -> "wow";
+      case SAD -> "buồn";
+      case ANGRY -> "giận";
+    };
   }
 
   @Override
@@ -176,6 +202,26 @@ public class ReactionServiceImpl implements ReactionService {
         .sadUsers(getReactionUsers(allReactions, ReactionType.SAD))
         .angryUsers(getReactionUsers(allReactions, ReactionType.ANGRY))
         .build();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<Long, Map<String, Object>> getReactionsCountsForPosts(List<Long> postIds) {
+    Map<Long, Map<String, Object>> result = new java.util.HashMap<>();
+    for (Long postId : postIds) {
+      Map<ReactionType, Long> reactionCounts = getReactionCounts(postId);
+      long total = reactionCounts.values().stream().mapToLong(Long::longValue).sum();
+      ReactionType top = reactionCounts.entrySet().stream()
+          .max(Map.Entry.comparingByValue())
+          .filter(e -> e.getValue() > 0)
+          .map(Map.Entry::getKey)
+          .orElse(null);
+      Map<String, Object> data = new java.util.HashMap<>();
+      data.put("totalReactions", total);
+      data.put("topReaction", top != null ? top.name() : null);
+      result.put(postId, data);
+    }
+    return result;
   }
 
   private List<ReactionUserInfo> getReactionUsers(List<PostReaction> reactions, ReactionType type) {

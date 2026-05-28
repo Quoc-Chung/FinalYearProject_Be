@@ -36,9 +36,9 @@ public class SavePostServiceImpl implements SavePostService {
     private final PostReactionRepository postReactionRepository;
     private final MinioProperties minioProperties;
 
-
     @Override
     public SavePostResponse savePort(Long userId, Long postId, Long collectionId) {
+        Long finalCollectionId = (collectionId == null) ? 1L : collectionId;
         PostCollection collection = postCollectionRepository.findById(collectionId)
             .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS));
         if (!collection.getUser().getUserId().equals(userId)) {
@@ -69,8 +69,6 @@ public class SavePostServiceImpl implements SavePostService {
 
         SavedPost saved = savePostRepository.save(savedPost);
         return mapToResponse(saved);
-
-
     }
     @Override
     public void unSavePort(Long userId, Long postId, Long collectionId) {
@@ -119,7 +117,6 @@ public class SavePostServiceImpl implements SavePostService {
         }
         return base + "/" + minioProperties.getBucketName() + "/" + objectKey;
     }
-
 
     private PostResponse mapToResponse(Post post, Long userId) {
         ReactionType currentUserReaction = null;

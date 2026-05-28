@@ -75,4 +75,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
       @Param("conversationId") Long conversationId,
       @Param("since") LocalDateTime since
   );
+
+  @Query("SELECT COUNT(m) FROM Message m " +
+         "WHERE m.isRead = false " +
+         "AND m.deletedAt IS NULL")
+  long countUnreadMessagesForAdmin();
 }

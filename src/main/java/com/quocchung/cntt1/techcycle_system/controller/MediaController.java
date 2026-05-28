@@ -52,6 +52,7 @@ public class MediaController {
       default -> ".jpg";
     };
   }
+
   @GetMapping("/comment/presigned-url")
   public ResponseEntity<APIResponse<PresignedUrlResponse>> getCommentPresignedUrl(
       @RequestParam String fileName,

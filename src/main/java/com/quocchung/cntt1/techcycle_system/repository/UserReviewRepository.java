@@ -21,6 +21,10 @@ public interface UserReviewRepository extends JpaRepository<UserReview, Long> {
   @Query("SELECT AVG(r.rating) FROM UserReview r WHERE r.toUser.userId = :userId")
   Double getAverageRatingByUserId(@Param("userId") Long userId);
 
+  default Double findAverageRating(Long userId) {
+    return getAverageRatingByUserId(userId);
+  }
+
   @Query("SELECT COUNT(r) FROM UserReview r WHERE r.toUser.userId = :userId")
   long countByToUserId(@Param("userId") Long userId);
 }
