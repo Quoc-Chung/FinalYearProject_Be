@@ -1,5 +1,10 @@
 package com.quocchung.cntt1.techcycle_system.controller;
 
+
+import com.quocchung.cntt1.techcycle_system.dto.response.FullReportResponse;
+
+import com.quocchung.cntt1.techcycle_system.dto.response.UserPostDetailResponse;
+import com.quocchung.cntt1.techcycle_system.dto.response.UserReportStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.CreateReportRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.ReportResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
@@ -15,9 +20,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class ReportController {
 
     private final ReportService reportService;
@@ -53,7 +61,7 @@ public class ReportController {
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasAnyRole( 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<APIResponse<ReportResponse>> getReportsByStatus(
             @PathVariable ReportStatus status,
             @RequestParam(defaultValue = "1") int page,
@@ -64,12 +72,45 @@ public class ReportController {
     }
 
     @PutMapping("/{reportId}/resolve")
-    @PreAuthorize("hasAnyRole( 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<APIResponse<ReportResponse>> resolveReport(
             @PathVariable Long reportId,
             @RequestParam ReportStatus status,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         ReportResponse result = reportService.resolveReport(reportId, userPrincipal.getUserId(), status);
         return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    // ========== ADMIN STATS ENDPOINTS ==========
+
+    @GetMapping("/full")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public ResponseEntity<APIResponse<FullReportResponse>> getFullReport() {
+        FullReportResponse report = reportService.getFullReport();
+        return ResponseEntity.ok(responseUtils.success(report));
+    }
+
+    @GetMapping("/users")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public ResponseEntity<APIResponse<List<UserReportStatsResponse>>> getUserReportStats(
+            @RequestParam(required = false) String searchText,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        List<UserReportStatsResponse> users = reportService.getUserReportStats(searchText, page, size);
+        return ResponseEntity.ok(responseUtils.success(users));
+    }
+
+    @GetMapping("/users/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public ResponseEntity<APIResponse<UserReportStatsResponse>> getUserStats(@PathVariable Long userId) {
+        UserReportStatsResponse userStats = reportService.getUserStats(userId);
+        return ResponseEntity.ok(responseUtils.success(userStats));
+    }
+
+    @GetMapping("/users/{userId}/posts")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public ResponseEntity<APIResponse<List<UserPostDetailResponse>>> getUserPosts(@PathVariable Long userId) {
+        List<UserPostDetailResponse> posts = reportService.getUserPosts(userId);
+        return ResponseEntity.ok(responseUtils.success(posts));
     }
 }

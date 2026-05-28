@@ -17,7 +17,11 @@ public class ResponseUtils{
         ResponseStatus.SUCCESS_MESSAGE,
         ResponseStatus.SUCCESS_LABEL
     ));
-    response.setData(Collections.singletonList(data));
+    if (data instanceof List) {
+      response.setData((List<T>) data);
+    } else {
+      response.setData(Collections.singletonList(data));
+    }
     response.setPage(null);
     response.setExtraData(Collections.emptyMap());
     return response;

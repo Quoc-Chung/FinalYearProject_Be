@@ -49,9 +49,14 @@ public interface DashboardRepository extends JpaRepository<Post, Long> {
     Long countApprovedPostsBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     // ========== USER STATS ==========
-    
-    // Đếm tổng số người dùng
-    @Query("SELECT COUNT(u) FROM User u WHERE u.deletedAt IS NULL")
+    @Query("""
+    SELECT COUNT(u)
+    FROM User u
+    JOIN UserRole ur ON ur.user = u
+    JOIN ur.role rr
+    WHERE rr.name <> 'ADMIN'
+    AND u.status = 'ACTIVE'
+""")
     Long countTotalUsers();
     
     // Đếm người dùng mới trong ngày
@@ -61,6 +66,10 @@ public interface DashboardRepository extends JpaRepository<Post, Long> {
     // Đếm người dùng theo trạng thái
     @Query("SELECT COUNT(u) FROM User u WHERE u.status = :status AND u.deletedAt IS NULL")
     Long countUsersByStatus(@Param("status") UserStatus status);
+
+    // Đếm người dùng đã xóa
+    @Query("SELECT COUNT(u) FROM User u WHERE u.deletedAt IS NOT NULL")
+    Long countDeletedUsers();
     
     // Lấy người dùng mới nhất
     @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL ORDER BY u.createdAt DESC")

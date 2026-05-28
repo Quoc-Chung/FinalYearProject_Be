@@ -59,6 +59,7 @@ public class User {
   @Column(name = "last_login_at")
   private LocalDateTime lastLoginAt;
 
+  @CreationTimestamp
   @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
 
@@ -67,7 +68,6 @@ public class User {
   private LocalDateTime updatedAt;
 
   @Column(name = "deleted_at")
-  @UpdateTimestamp
   private LocalDateTime deletedAt;
 
 }
