@@ -197,8 +197,7 @@ public class ChatServiceImpl implements ChatService {
     sendChatNotification(conversation, sender, message);
 
     // Gửi thông báo cho admin khi có tin nhắn mới (nếu sender không phải admin)
-    boolean isAdminSender = sender.getRoles().stream()
-        .anyMatch(r -> r.getName().name().equals("ADMIN"));
+    boolean isAdminSender = userRepository.hasRole(sender.getUserId(), "ADMIN");
     if (!isAdminSender) {
       List<User> admins = userRepository.getAllAdmin();
       for (User admin : admins) {
