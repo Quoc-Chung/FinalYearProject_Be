@@ -1,6 +1,7 @@
 package com.quocchung.cntt1.techcycle_system.dtos.response.Chat;
 
 import com.quocchung.cntt1.techcycle_system.model.MessageAttachment;
+import com.quocchung.cntt1.techcycle_system.utils.MinioUtils;
 import com.quocchung.cntt1.techcycle_system.utils.enums.MediaType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,7 +27,7 @@ public class AttachmentResponse {
         .attachmentId(attachment.getAttachmentId())
         .mediaType(attachment.getMediaType())
         .objectKey(attachment.getObjectKey())
-        .url(attachment.getObjectKey())
+        .url(MinioUtils.buildPublicUrl(attachment.getObjectKey()))
         .mimeType(attachment.getMimeType())
         .fileSize(attachment.getFileSize())
         .durationSeconds(attachment.getDurationSeconds())

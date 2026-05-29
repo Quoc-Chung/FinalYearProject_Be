@@ -1,10 +1,10 @@
 package com.quocchung.cntt1.techcycle_system.service;
 
 
-import com.quocchung.cntt1.techcycle_system.dto.response.FullReportResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.FullReportResponse;
 
-import com.quocchung.cntt1.techcycle_system.dto.response.UserPostDetailResponse;
-import com.quocchung.cntt1.techcycle_system.dto.response.UserReportStatsResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserPostDetailResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserReportStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.CreateReportRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.ReportResponse;
 import com.quocchung.cntt1.techcycle_system.utils.enums.ReportStatus;
@@ -26,7 +26,7 @@ public interface ReportService {
 
     FullReportResponse getFullReport();
 
-    List<UserReportStatsResponse> getUserReportStats(String searchText, int page, int size);
+    Page<UserReportStatsResponse> getUserReportStats(String searchText, int page, int size);
 
     List<UserPostDetailResponse> getUserPosts(Long userId);
 

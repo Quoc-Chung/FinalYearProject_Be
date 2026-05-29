@@ -1,10 +1,10 @@
 package com.quocchung.cntt1.techcycle_system.controller;
 
 
-import com.quocchung.cntt1.techcycle_system.dto.response.FullReportResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.FullReportResponse;
 
-import com.quocchung.cntt1.techcycle_system.dto.response.UserPostDetailResponse;
-import com.quocchung.cntt1.techcycle_system.dto.response.UserReportStatsResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserPostDetailResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserReportStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.CreateReportRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.ReportResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
@@ -81,8 +81,6 @@ public class ReportController {
         return ResponseEntity.ok(responseUtils.success(result));
     }
 
-    // ========== ADMIN STATS ENDPOINTS ==========
-
     @GetMapping("/full")
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<APIResponse<FullReportResponse>> getFullReport() {
@@ -92,13 +90,15 @@ public class ReportController {
 
     @GetMapping("/users")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<APIResponse<List<UserReportStatsResponse>>> getUserReportStats(
+    public ResponseEntity<APIResponse<UserReportStatsResponse>> getUserReportStats(
             @RequestParam(required = false) String searchText,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        List<UserReportStatsResponse> users = reportService.getUserReportStats(searchText, page, size);
-        return ResponseEntity.ok(responseUtils.success(users));
+        Page<UserReportStatsResponse> result = reportService.getUserReportStats(searchText, page, size);
+        return ResponseEntity.ok(
+                responseUtils.successPage(result.getContent(), page, result.getTotalElements(), size));
     }
+
 
     @GetMapping("/users/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN')")

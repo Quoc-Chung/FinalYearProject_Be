@@ -1,9 +1,9 @@
 package com.quocchung.cntt1.techcycle_system.service.impl;
 
 import com.quocchung.cntt1.techcycle_system.config.MinioProperties;
-import com.quocchung.cntt1.techcycle_system.dto.response.FullReportResponse;
-import com.quocchung.cntt1.techcycle_system.dto.response.UserPostDetailResponse;
-import com.quocchung.cntt1.techcycle_system.dto.response.UserReportStatsResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.FullReportResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserPostDetailResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserReportStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.request.CreateReportRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.ReportResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
@@ -181,7 +181,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public List<UserReportStatsResponse> getUserReportStats(String searchText, int page, int size) {
+    public Page<UserReportStatsResponse> getUserReportStats(String searchText, int page, int size) {
         List<User> allUsers = userRepository.findAllByRoleName("USER");
         List<User> filtered;
 
@@ -200,7 +200,7 @@ public class ReportServiceImpl implements ReportService {
         int end = Math.min(start + size, total);
         List<User> paged = start < total ? filtered.subList(start, end) : List.of();
 
-        return paged.stream().map(user -> {
+        List<UserReportStatsResponse> content = paged.stream().map(user -> {
             Long userTotalPosts = postRepository.countByUserUserId(user.getUserId());
             Long approvedPosts = postRepository.countByUserUserIdAndStatus(user.getUserId(), PostStatus.APPROVED);
             Long rejectedPosts = postRepository.countByUserUserIdAndStatus(user.getUserId(), PostStatus.REJECTED);
@@ -221,6 +221,8 @@ public class ReportServiceImpl implements ReportService {
                     .followingCount(followingCount)
                     .build();
         }).collect(Collectors.toList());
+
+        return new org.springframework.data.domain.PageImpl<>(content, org.springframework.data.domain.PageRequest.of(page - 1, size), total);
     }
 
     @Override

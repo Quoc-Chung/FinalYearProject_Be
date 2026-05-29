@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -42,6 +43,7 @@ public class ConversationController {
   private final WebSocketEventListener eventListener;
   private final ResponseUtils responseUtils;
   private final UserRepository userRepository;
+  private final SimpMessagingTemplate messagingTemplate;
 
   /**
    * Tạo một cuộc trò chuyện mới.
@@ -52,6 +54,18 @@ public class ConversationController {
       @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
     ConversationResponse conversation = chatService.createConversation(request, userPrincipal.getUserId());
+    return ResponseEntity.ok(responseUtils.success(conversation));
+  }
+
+  /**
+   * Tạo hoặc lấy cuộc trò chuyện với admin.
+   * POST /api/conversations/with-admin
+   */
+  @PostMapping("/with-admin")
+  public ResponseEntity<APIResponse<ConversationResponse>> createOrGetAdminConversation(
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    ConversationResponse conversation = chatService.createConversationWithAdmin(userPrincipal.getUserId());
     return ResponseEntity.ok(responseUtils.success(conversation));
   }
   /**
@@ -73,6 +87,7 @@ public class ConversationController {
         .anyMatch(auth -> auth.equals("ROLE_ADMIN") || auth.equals("ADMIN"));
 
     Page<ConversationResponse> conversations;
+    // neu la admin
     if (isAdmin) {
       List<User> admins = userRepository.findAllByRoleName("ADMIN");
       Set<Long> adminUserIds = admins.stream()
@@ -168,6 +183,78 @@ public class ConversationController {
     List<ChatMessageResponse> content = messages.getContent();
     return ResponseEntity.ok(responseUtils.successPage(content, page, messages.getTotalElements(), size));
   }
+
+  /**
+   * Lấy tin nhắn cho admin (không cần kiểm tra quyền user trong conversation).
+   * GET /api/conversations/admin/messages/{conversationId}
+   */
+  @GetMapping("/admin/messages/{conversationId}")
+  @PreAuthorize("hasAnyRole('ADMIN')")
+  public ResponseEntity<APIResponse<ChatMessageResponse>> getMessagesForAdmin(
+      @PathVariable Long conversationId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "500") int size
+  ) {
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+    Page<ChatMessageResponse> messages = chatService.getMessages(conversationId, null, pageable);
+    List<ChatMessageResponse> content = messages.getContent();
+    return ResponseEntity.ok(responseUtils.successPage(content, page, messages.getTotalElements(), size));
+  }
+
+  /**
+   * Gửi tin nhắn từ người dùng thường.
+   * POST /api/conversations/send/{conversationId}
+   */
+  @PostMapping("/send/{conversationId}")
+  public ResponseEntity<APIResponse<ChatMessageResponse>> sendMessage(
+      @PathVariable Long conversationId,
+      @RequestBody ChatMessageRequest request,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    User user = userRepository.findById(userPrincipal.getUserId())
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+    ChatMessageResponse message = chatService.sendMessage(conversationId, request, user);
+
+    // Broadcast to WebSocket for real-time updates
+    messagingTemplate.convertAndSend(
+        "/topic/conversation." + conversationId,
+        message
+    );
+    messagingTemplate.convertAndSend(
+        "/topic/admin/messages",
+        message
+    );
+
+    return ResponseEntity.ok(responseUtils.success(message));
+  }
+
+  /**
+   * Gửi tin nhắn từ admin.
+   * POST /api/conversations/admin/send/{conversationId}
+   */
+  @PostMapping("/admin/send/{conversationId}")
+  @PreAuthorize("hasAnyRole('ADMIN')")
+  public ResponseEntity<APIResponse<ChatMessageResponse>> sendMessageAsAdmin(
+      @PathVariable Long conversationId,
+      @RequestBody ChatMessageRequest request,
+      @AuthenticationPrincipal UserPrincipal userPrincipal
+  ) {
+    User admin = userRepository.findById(userPrincipal.getUserId())
+        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
+    ChatMessageResponse message = chatService.sendMessage(conversationId, request, admin);
+
+    // Broadcast to WebSocket for real-time updates
+    messagingTemplate.convertAndSend(
+        "/topic/conversation." + conversationId,
+        message
+    );
+    messagingTemplate.convertAndSend(
+        "/topic/admin/messages",
+        message
+    );
+
+    return ResponseEntity.ok(responseUtils.success(message));
+  }
   /**
    * Lấy thông tin chi tiết của một tin nhắn cụ thể.
    */
@@ -189,121 +276,5 @@ public class ConversationController {
     return ResponseEntity.ok(responseUtils.success(online));
   }
 
-  // ========== ADMIN APIS ==========
-  /**
-   * API Tạo cuộc trò chuyện giữa user và admin
-   * POST /api/conversations/admin/user/{userId}
-   * Tạo cuộc trò chuyện mới với người dùng (admin chủ động nhắn)
-   */
-  @PostMapping("/admin/user/{userId}")
-  public ResponseEntity<APIResponse<ConversationResponse>> createConversationWithUser(
-      @PathVariable Long userId,
-      @AuthenticationPrincipal UserPrincipal userPrincipal
-  ) {
-    ConversationResponse conversation = chatService.createConversationWithAdmin(userId, userPrincipal.getUserId());
-    return ResponseEntity.ok(responseUtils.success(conversation));
-  }
 
-  /**
-   * Lấy tất cả cuộc trò chuyện mà admin này tham gia
-   */
-  @GetMapping("/admin/my-conversations")
-  @PreAuthorize("hasAnyRole('ADMIN')")
-  public ResponseEntity<APIResponse<ConversationResponse>> getMyConversationsForAdmin(
-      @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "50") int size
-  ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "lastMessageAt"));
-    Page<ConversationResponse> conversations = chatService.getConversationsByAdminId(userPrincipal.getUserId(), pageable);
-    List<ConversationResponse> content = conversations.getContent();
-    return ResponseEntity.ok(responseUtils.successPage(content, page, conversations.getTotalElements(), size));
-  }
-
-  /**
-   * Lấy tất cả cuộc trò chuyện với điều kiện có admin tham gia
-   */
-  @GetMapping("/admin/all")
-  @PreAuthorize("hasAnyRole('ADMIN')")
-  public ResponseEntity<APIResponse<ConversationResponse>> getAllConversationsForAdmin(
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "50") int size
-  ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "lastMessageAt"));
-    Page<ConversationResponse> conversations = chatService.getAllConversationsForAdmin(pageable);
-    List<ConversationResponse> content = conversations.getContent();
-    return ResponseEntity.ok(responseUtils.successPage(content, page, conversations.getTotalElements(), size));
-  }
-
-  /**
-   * Lấy tin nhắn trong một cuộc trò chuyện giua user và  admin.
-   */
-  @GetMapping("/admin/messages/{conversationId}")
-  @PreAuthorize("hasAnyRole('ADMIN')")
-  public ResponseEntity<APIResponse<ChatMessageResponse>> getMessagesForAdmin(
-      @PathVariable Long conversationId,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "100") int size
-  ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
-    Page<ChatMessageResponse> messages = chatService.getMessages(conversationId, null, pageable);
-    List<ChatMessageResponse> content = messages.getContent();
-    return ResponseEntity.ok(responseUtils.successPage(content, page, messages.getTotalElements(), size));
-  }
-
-  /**
-   * Đếm số cuộc trò chuyện có tin nhắn chưa đọc cho admin.
-   */
-  @GetMapping("/admin/unread-count")
-  @PreAuthorize("hasAnyRole('ADMIN')")
-  public ResponseEntity<APIResponse<Long>> getUnreadCountForAdmin(
-      @AuthenticationPrincipal UserPrincipal userPrincipal
-  ) {
-    long count = chatService.countUnreadConversationsForAdmin();
-    return ResponseEntity.ok(responseUtils.success(count));
-  }
-
-  /**
-   * Gửi tin nhắn từ admin đến một cuộc trò chuyện.
-   */
-  @PostMapping("/admin/send/{conversationId}")
-  @PreAuthorize("hasAnyRole('ADMIN')")
-  public ResponseEntity<APIResponse<ChatMessageResponse>> sendMessageAsAdmin(
-      @PathVariable Long conversationId,
-      @RequestBody ChatMessageRequest request,
-      @AuthenticationPrincipal UserPrincipal userPrincipal
-  ) {
-    User admin = userRepository.findById(userPrincipal.getUserId())
-        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
-    ChatMessageResponse message = chatService.sendMessage(conversationId, request, admin);
-    return ResponseEntity.ok(responseUtils.success(message));
-  }
-
-  // ========== USER-TO-ADMIN APIS ==========
-
-  /**
-   * Lấy hoặc tạo cuộc trò chuyện với admin.
-   */
-  @PostMapping("/with-admin")
-  public ResponseEntity<APIResponse<ConversationResponse>> getOrCreateAdminConversation(
-      @AuthenticationPrincipal UserPrincipal userPrincipal
-  ) {
-    ConversationResponse conversation = chatService.getOrCreateAdminConversation(userPrincipal.getUserId());
-    return ResponseEntity.ok(responseUtils.success(conversation));
-  }
-
-  /**
-   * Gửi tin nhắn trong một cuộc trò chuyện.
-   */
-  @PostMapping("/send/{conversationId}")
-  public ResponseEntity<APIResponse<ChatMessageResponse>> sendMessage(
-      @PathVariable Long conversationId,
-      @RequestBody ChatMessageRequest request,
-      @AuthenticationPrincipal UserPrincipal userPrincipal
-  ) {
-    User user = userRepository.findById(userPrincipal.getUserId())
-        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
-    ChatMessageResponse message = chatService.sendMessage(conversationId, request, user);
-    return ResponseEntity.ok(responseUtils.success(message));
-  }
 }

@@ -32,4 +32,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
   // Lấy bài viết gần đây nhất (cho dashboard)
   List<Post> findTop20ByDeletedAtIsNullOrderByCreatedAtDesc();
 
+  // Lấy bài viết đang chờ duyệt (phân trang)
+  Page<Post> findByStatus(Pageable pageable, PostStatus status);
+
 }

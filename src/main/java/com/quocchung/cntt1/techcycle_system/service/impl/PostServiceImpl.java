@@ -174,15 +174,37 @@ public class PostServiceImpl implements PostService {
             .tag(tag)
             .build());
       }
-      postTagRepository.saveAll(postTags);
-      post.getPostTags().addAll(postTags);
+        postTagRepository.saveAll(postTags);
+        post.getPostTags().addAll(postTags);
+      }
+
+      // Gửi thông báo cho tất cả admin khi có bài viết mới
+      List<User> admins = userRepository.getAllAdmin();
+      for (User admin : admins) {
+        String title = "Bài viết mới cần duyệt";
+        String content = author.getFullName() + " đã tạo bài viết \"" + post.getTitle() + "\" cần được duyệt";
+        String targetUrl = "/admin/posts/pending";
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("postId", post.getPostId());
+        data.put("postTitle", post.getTitle());
+        data.put("authorName", author.getFullName());
+
+        notificationService.createNotification(
+            admin,
+            author,
+            NotificationType.POST_PENDING,
+            title,
+            content,
+            targetUrl,
+            data
+        );
+      }
+
+      return mapToResponse(post);
     }
 
-    return mapToResponse(post);
-  }
-
-  @Override
-  public PostResponse getPost(Long id) {
+    @Override
+    public PostResponse getPost(Long id) {
     Post post = postRepository.findById(id)
         .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
     return mapToResponse(post);
@@ -878,5 +900,20 @@ public class PostServiceImpl implements PostService {
     post.setStatus(PostStatus.APPROVED);
     Post saved = postRepository.save(post);
     return mapToResponse(saved, userId);
+  }
+
+  @Override
+  public Page<PostResponse> getPendingPosts(String keyword, Pageable pageable) {
+    Specification<Post> spec = Specification.where(PostSpecifications.hasStatus(PostStatus.PENDING));
+
+    if (keyword != null && !keyword.isBlank()) {
+      Specification<Post> keywordSpec = Specification.where(
+          PostSpecifications.hasTitle(keyword)
+      ).or(PostSpecifications.hasDescription(keyword))
+       .or(PostSpecifications.hasAuthorFullName(keyword));
+      spec = spec.and(keywordSpec);
+    }
+
+    return postRepository.findAll(spec, pageable).map(this::mapToResponse);
   }
 }

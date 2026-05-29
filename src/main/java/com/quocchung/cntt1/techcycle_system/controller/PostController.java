@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -239,6 +240,20 @@ public class PostController {
   ) {
     return ResponseEntity.ok(responseUtils.success(
         postService.unhidePost(id, userPrincipal.getUserId())));
+  }
+
+  @GetMapping("/pending")
+  @PreAuthorize("hasAnyRole('ADMIN')")
+  public ResponseEntity<APIResponse<PostResponse>> getPendingPosts(
+      @RequestParam(required = false) String keyword,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size
+  ) {
+    int pageIndex = Math.max(1, page) - 1;
+    Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    Page<PostResponse> result = postService.getPendingPosts(keyword, pageable);
+    return ResponseEntity.ok(responseUtils.successPage(
+        result.getContent(), result.getNumber() + 1, result.getTotalElements(), result.getSize()));
   }
 
 }

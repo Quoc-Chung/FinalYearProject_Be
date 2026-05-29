@@ -82,4 +82,6 @@ public interface PostService {
   PostResponse markAsSold(Long postId, Long userId);
 
   PostResponse unhidePost(Long postId, Long userId);
+
+  Page<PostResponse> getPendingPosts(String keyword, Pageable pageable);
 }

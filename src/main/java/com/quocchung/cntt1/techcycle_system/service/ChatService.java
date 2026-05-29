@@ -48,7 +48,7 @@ public interface ChatService {
 
   Page<ConversationResponse> getConversationsByAdminId(Long adminId, Pageable pageable, Set<Long> adminUserIds);
 
-  ConversationResponse createConversationWithAdmin(Long userId, Long adminId);
+  ConversationResponse createConversationWithAdmin(Long userId);
 
   long countUnreadConversationsForAdmin();
 
