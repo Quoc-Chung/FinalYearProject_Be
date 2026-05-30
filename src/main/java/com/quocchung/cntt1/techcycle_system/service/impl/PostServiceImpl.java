@@ -220,6 +220,8 @@ public class PostServiceImpl implements PostService {
       throw new ResException(ResErrorCode.PERMISSION_DENIED);
     }
 
+    post.setStatus(PostStatus.PENDING);
+
     if (request.getTitle() != null) {
       post.setTitle(request.getTitle());
     }
@@ -301,6 +303,11 @@ public class PostServiceImpl implements PostService {
     }
 
     if (request.getTagNames() != null && !request.getTagNames().isEmpty()) {
+      // Xóa các tag cũ trong database trước khi thêm mới
+      postTagRepository.deleteAll(post.getPostTags());
+      post.getPostTags().clear();
+      postRepository.saveAndFlush(post);
+
       List<PostTag> postTags = new ArrayList<>();
       for (String tagName : request.getTagNames()) {
         String slug = slugify(tagName);
@@ -318,6 +325,10 @@ public class PostServiceImpl implements PostService {
       }
       postTagRepository.saveAll(postTags);
       post.getPostTags().addAll(postTags);
+    } else {
+      // Nếu không có tag mới, xóa hết tag cũ
+      postTagRepository.deleteAll(post.getPostTags());
+      post.getPostTags().clear();
     }
 
     return mapToResponse(post);
