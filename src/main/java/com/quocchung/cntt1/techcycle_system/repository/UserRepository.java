@@ -38,4 +38,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
       + "WHERE ur.role.name = 'ADMIN'"
   )
   List<User> getAllAdmin();
+
+  @Query(value = "SELECT u.* FROM users u " +
+         "LEFT JOIN posts p ON u.user_id = p.user_id AND p.delete_at IS NULL " +
+         "WHERE u.deleted_at IS NULL AND u.status = 'ACTIVE' " +
+         "GROUP BY u.user_id " +
+         "ORDER BY COUNT(p.post_id) DESC",
+         countQuery = "SELECT COUNT(DISTINCT u.user_id) FROM users u WHERE u.deleted_at IS NULL AND u.status = 'ACTIVE'",
+         nativeQuery = true)
+  List<User> findTopSellersByPostCount(org.springframework.data.domain.Pageable pageable);
 }

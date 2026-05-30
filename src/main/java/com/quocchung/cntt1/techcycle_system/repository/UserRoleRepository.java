@@ -18,4 +18,9 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Integer> {
   List<Integer> findRoleIdsByUserId(@Param("userId") Long userId);
 
 
+  @Query("SELECT CASE WHEN COUNT(ur) > 0 THEN TRUE ELSE FALSE END " +
+         "FROM UserRole ur " +
+         "WHERE ur.user.userId = :userId AND ur.role.name = :roleName")
+  Boolean checkUserIsAdmin(@Param("userId") Long userId,
+      @Param("roleName") String roleName);
 }

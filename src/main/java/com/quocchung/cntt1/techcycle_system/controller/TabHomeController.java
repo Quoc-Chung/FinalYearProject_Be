@@ -4,6 +4,7 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.PostUserFollow
 import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.SearchPopularResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.SuggestedSellerResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.TodayActivityResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.NewestPostSidebarResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.TabHomeService;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -52,5 +54,13 @@ public class TabHomeController {
   public ResponseEntity<APIResponse<TodayActivityResponse>> getTodayActivity() {
     TodayActivityResponse result = tabHomeService.getTodayActivity();
     return ResponseEntity.ok(responseUtils.success(result));
+  }
+
+  @GetMapping("/newest-posts")
+  public ResponseEntity<APIResponse<NewestPostSidebarResponse>> getNewestPosts(
+      @RequestParam(defaultValue = "5") Integer limit
+  ) {
+    List<NewestPostSidebarResponse> result = tabHomeService.getNewestPostsForSidebar(limit);
+    return ResponseEntity.ok(responseUtils.successList(result));
   }
 }

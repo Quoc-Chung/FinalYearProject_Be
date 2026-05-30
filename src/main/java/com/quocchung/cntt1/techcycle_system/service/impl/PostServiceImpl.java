@@ -772,14 +772,54 @@ public class PostServiceImpl implements PostService {
       responseRate = Math.min((float) followerCount / postCount, 5f);
     }
 
-    List<PostDetailUser.PostSeller> postSellerList = postRepository
-        .findByUserUserId(author.getUserId())
-        .stream()
+    List<Post> authorPosts = postRepository.findByUserUserId(author.getUserId());
+    List<Long> postIds = authorPosts.stream()
         .filter(p -> p.getPostId() != null)
-        .map(p -> PostDetailUser.PostSeller.builder()
-            .title(p.getTitle())
-            .price(p.getPrice() != null ? p.getPrice().toString() : null)
-            .build())
+        .map(Post::getPostId)
+        .toList();
+
+    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    Map<Long, Long> commentCounts = commentRepository.countCommentsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    java.text.NumberFormat currencyFormat = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+
+    List<PostDetailUser.PostSeller> postSellerList = authorPosts.stream()
+        .filter(p -> p.getPostId() != null)
+        .map(p -> {
+          String thumbnailUrl = null;
+          String mediaType = null;
+          if (p.getImages() != null && !p.getImages().isEmpty()) {
+            PostImage firstImage = p.getImages().get(0);
+            thumbnailUrl = buildPublicUrl(firstImage.getObjectKey());
+            mediaType = firstImage.getMediaType() != null ? firstImage.getMediaType().name() : "IMAGE";
+          }
+          String formattedPrice = p.getPrice() != null
+              ? currencyFormat.format(p.getPrice()).replace("₫", "").trim() + "₫"
+              : null;
+          String postedAt = formatRelativeTimeInternal(p.getCreatedAt());
+          return PostDetailUser.PostSeller.builder()
+              .postId(p.getPostId())
+              .title(p.getTitle())
+              .price(p.getPrice() != null ? p.getPrice().toString() : null)
+              .formattedPrice(formattedPrice)
+              .thumbnailUrl(thumbnailUrl)
+              .mediaType(mediaType)
+              .countReaction(reactionCounts.getOrDefault(p.getPostId(), 0L))
+              .countComment(commentCounts.getOrDefault(p.getPostId(), 0L))
+              .postedAt(postedAt)
+              .build();
+        })
         .toList();
 
     String avatarUrl = author.getAvatarUrl();
@@ -915,5 +955,23 @@ public class PostServiceImpl implements PostService {
     }
 
     return postRepository.findAll(spec, pageable).map(this::mapToResponse);
+  }
+
+  private String formatRelativeTimeInternal(LocalDateTime dateTime) {
+    if (dateTime == null) {
+      return "Không rõ";
+    }
+    LocalDateTime now = LocalDateTime.now();
+    long minutes = java.time.Duration.between(dateTime, now).toMinutes();
+    long hours = java.time.Duration.between(dateTime, now).toHours();
+    long days = java.time.Duration.between(dateTime, now).toDays();
+
+    if (minutes < 1) return "Vừa xong";
+    if (minutes < 60) return minutes + " phút trước";
+    if (hours < 24) return hours + " giờ trước";
+    if (days < 7) return days + " ngày trước";
+    if (days < 30) return (days / 7) + " tuần trước";
+    if (days < 365) return (days / 30) + " tháng trước";
+    return (days / 365) + " năm trước";
   }
 }

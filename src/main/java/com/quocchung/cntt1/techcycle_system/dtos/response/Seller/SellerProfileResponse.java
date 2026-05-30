@@ -45,7 +45,10 @@ public class SellerProfileResponse {
         private BigDecimal price;
         private String formattedPrice;
         private String postedAt;
-        private String image;
+        private String thumbnailUrl;
+        private String mediaType;
+        private Long countReaction;
+        private Long countComment;
     }
 
     @Data

@@ -81,6 +81,21 @@ public class UserFollowServiceImpl implements UserFollowService {
     userFollowRepository.delete(userFollow);
   }
 
+  // KIỂM TRA CÓ ĐANG FOLLOW KHÔNG
+  @Override
+  @Transactional(readOnly = true)
+  public boolean isFollowing(Long currentUserId, Long targetUserId) {
+    if (currentUserId == null || targetUserId == null) {
+      return false;
+    }
+    User follower = userRepository.findById(currentUserId).orElse(null);
+    User following = userRepository.findById(targetUserId).orElse(null);
+    if (follower == null || following == null) {
+      return false;
+    }
+    return userFollowRepository.existsByFollowerAndFollowing(follower, following);
+  }
+
   // DANH SÁCH FOLLOWING (người mình đang follow)
   @Override
   public Page<FollowResponse> getFollowing(Long userId, int page, int size) {

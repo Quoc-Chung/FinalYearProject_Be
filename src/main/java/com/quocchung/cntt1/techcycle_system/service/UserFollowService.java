@@ -11,6 +11,9 @@ public interface UserFollowService {
   // Unfollow một người dùng
   void unfollowUser(Long currentUserId, Long targetUserId);
 
+  // Kiểm tra currentUser có đang follow targetUser không
+  boolean isFollowing(Long currentUserId, Long targetUserId);
+
   // Lấy danh sách người mình đang follow (following)
   Page<FollowResponse> getFollowing(Long userId, int page, int size);
 

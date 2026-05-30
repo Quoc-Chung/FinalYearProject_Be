@@ -76,4 +76,13 @@ public class UserFlowController {
     FollowCountResponse result = userFollowService.getFollowCount(userPrincipal.getUserId());
     return ResponseEntity.ok(responseUtils.success(result));
   }
+
+  // Kiểm tra currentUser có đang follow targetUser không
+  @GetMapping("/is-following/{targetUserId}")
+  public ResponseEntity<APIResponse<Boolean>> isFollowing(
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
+      @PathVariable Long targetUserId) {
+    boolean result = userFollowService.isFollowing(userPrincipal.getUserId(), targetUserId);
+    return ResponseEntity.ok(responseUtils.success(result));
+  }
 }
