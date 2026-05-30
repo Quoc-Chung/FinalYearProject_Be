@@ -222,18 +222,23 @@ public class TabHomeServiceImpl implements TabHomeService {
   public TodayActivityResponse getTodayActivity() {
     LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
 
-    List<Post> postsToday = postRepository.findAll().stream()
+    // Lấy tất cả posts để kiểm tra approvedAt và updatedAt
+    List<Post> allPosts = postRepository.findAll();
+
+    // Đếm các bài được tạo hôm nay
+    long countPostToday = allPosts.stream()
         .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(startOfDay))
-        .collect(Collectors.toList());
-
-    long countPostToday = postsToday.size();
-
-    long countApproved = postsToday.stream()
-        .filter(p -> p.getStatus() == PostStatus.APPROVED)
         .count();
 
-    long countRejected = postsToday.stream()
-        .filter(p -> p.getStatus() == PostStatus.REJECTED)
+    // Đếm các bài được duyệt hôm nay (approvedAt hôm nay, không phụ thuộc ngày tạo)
+    long countApproved = allPosts.stream()
+        .filter(p -> p.getApprovedAt() != null && p.getApprovedAt().isAfter(startOfDay))
+        .count();
+
+    // Đếm các bài bị từ chối hôm nay (updatedAt hôm nay và status là REJECTED)
+    long countRejected = allPosts.stream()
+        .filter(p -> p.getStatus() != null && p.getStatus().equals(PostStatus.REJECTED))
+        .filter(p -> p.getUpdatedAt() != null && p.getUpdatedAt().isAfter(startOfDay))
         .count();
 
     long newUserCount = userRepository.findAll().stream()

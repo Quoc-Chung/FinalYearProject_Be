@@ -35,6 +35,9 @@ public class PostResponse {
 
   private String currentUserReaction;
 
+  private Long reactionCount;
+  private String topReaction;
+
   private CategoryInfo category;
   private BrandInfo brand;
   private AuthorInfo author;

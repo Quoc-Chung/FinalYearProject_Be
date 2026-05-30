@@ -658,33 +658,32 @@ public class PostServiceImpl implements PostService {
     if (categoryId != null) {
       spec = spec.and(PostSpecifications.hasCategoryId(categoryId));
     }
-    return postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
+    List<Post> posts = postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
+    
+    // Batch fetch reaction counts
+    List<Long> postIds = posts.stream().map(Post::getPostId).toList();
+    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds)
         .stream()
-        .map(post -> mapToResponse(post, userId))
+        .collect(java.util.stream.Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+    Map<Long, String> topReactions = postReactionRepository.countReactionsByPostIdsGroupByType(postIds)
+        .stream()
+        .collect(java.util.stream.Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> ((com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType) arr[1]).name(),
+            (existing, replacement) -> existing // keep first if duplicate
+        ));
+    
+    return posts.stream()
+        .map(post -> mapToResponse(post, userId, 
+            reactionCounts.getOrDefault(post.getPostId(), 0L),
+            topReactions.get(post.getPostId())))
         .toList();
   }
 
-  private String slugify(String input) {
-    return input.trim()
-        .toLowerCase()
-        .replaceAll("[^a-z0-9\\s-]", "")
-        .replaceAll("\\s+", "-");
-  }
-  private List<Long> getAllCategoryIds(Long parentId) {
-
-    List<Long> ids = new ArrayList<>();
-    ids.add(parentId);
-    List<Category> children = categoryRepository
-        .findByParent_CategoryId(parentId);
-    ids.addAll(
-        children.stream()
-            .map(Category::getCategoryId)
-            .toList()
-    );
-    return ids;
-  }
-
-  private PostResponse mapToResponse(Post post, Long userId) {
+  private PostResponse mapToResponse(Post post, Long userId, Long reactionCount, String topReaction) {
     ReactionType currentUserReaction = null;
     if (userId != null) {
       Optional<PostReaction> reaction = postReactionRepository.findByPostPostIdAndUserUserId(post.getPostId(), userId);
@@ -707,6 +706,8 @@ public class PostServiceImpl implements PostService {
         .approvedAt(post.getApprovedAt())
         .rejectedReason(post.getRejectedReason())
         .currentUserReaction(currentUserReaction != null ? currentUserReaction.name() : null)
+        .reactionCount(reactionCount)
+        .topReaction(topReaction)
         .category(post.getCategory() == null ? null :
             PostResponse.CategoryInfo.builder()
                 .categoryId(post.getCategory().getCategoryId())
@@ -762,8 +763,32 @@ public class PostServiceImpl implements PostService {
         .build();
   }
 
+  private PostResponse mapToResponse(Post post, Long userId) {
+    return mapToResponse(post, userId, 0L, null);
+  }
+
   private PostResponse mapToResponse(Post post) {
     return mapToResponse(post, null);
+  }
+
+  private String slugify(String input) {
+    return input.trim()
+        .toLowerCase()
+        .replaceAll("[^a-z0-9\\s-]", "")
+        .replaceAll("\\s+", "-");
+  }
+  private List<Long> getAllCategoryIds(Long parentId) {
+
+    List<Long> ids = new ArrayList<>();
+    ids.add(parentId);
+    List<Category> children = categoryRepository
+        .findByParent_CategoryId(parentId);
+    ids.addAll(
+        children.stream()
+            .map(Category::getCategoryId)
+            .toList()
+    );
+    return ids;
   }
 
   @Override
@@ -784,19 +809,19 @@ public class PostServiceImpl implements PostService {
     }
 
     List<Post> authorPosts = postRepository.findByUserUserId(author.getUserId());
-    List<Long> postIds = authorPosts.stream()
+    List<Long> authorPostIds = authorPosts.stream()
         .filter(p -> p.getPostId() != null)
         .map(Post::getPostId)
         .toList();
 
-    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds)
+    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(authorPostIds)
         .stream()
         .collect(Collectors.toMap(
             arr -> (Long) arr[0],
             arr -> (Long) arr[1]
         ));
 
-    Map<Long, Long> commentCounts = commentRepository.countCommentsByPostIds(postIds)
+    Map<Long, Long> commentCounts = commentRepository.countCommentsByPostIds(authorPostIds)
         .stream()
         .collect(Collectors.toMap(
             arr -> (Long) arr[0],

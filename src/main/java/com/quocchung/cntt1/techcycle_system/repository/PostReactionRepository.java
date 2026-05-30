@@ -26,4 +26,7 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, Long
 
   @Query("SELECT pr.post.postId, COUNT(pr) FROM PostReaction pr WHERE pr.post.postId IN :postIds GROUP BY pr.post.postId")
   List<Object[]> countReactionsByPostIds(@Param("postIds") List<Long> postIds);
+
+  @Query("SELECT pr.post.postId, pr.reactionType, COUNT(pr) FROM PostReaction pr WHERE pr.post.postId IN :postIds GROUP BY pr.post.postId, pr.reactionType")
+  List<Object[]> countReactionsByPostIdsGroupByType(@Param("postIds") List<Long> postIds);
 }
