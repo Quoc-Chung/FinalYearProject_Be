@@ -32,6 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     String authHeader = request.getHeader("Authorization");
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      // No token provided, continue as anonymous
       filterChain.doFilter(request, response);
       return;
     }
@@ -39,7 +40,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     String token = authHeader.substring(7);
     try {
       if (redisTokenService.isAccessTokenBlacklisted(token) || !jwtService.isAccessToken(token)) {
-        responseWriter.write(request, response, ResErrorCode.UNAUTHORIZED);
+        // Invalid token, continue as anonymous instead of rejecting
+        filterChain.doFilter(request, response);
         return;
       }
 
@@ -56,7 +58,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
       }
     } catch (Exception ex) {
-      responseWriter.write(request, response, ResErrorCode.UNAUTHORIZED);
+      // Token parsing failed, continue as anonymous
+      filterChain.doFilter(request, response);
       return;
     }
 
