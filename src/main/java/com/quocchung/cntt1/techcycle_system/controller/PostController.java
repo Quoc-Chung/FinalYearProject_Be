@@ -163,20 +163,22 @@ public class PostController {
 
   @GetMapping("/get-latest-posts")
   public ResponseEntity<APIResponse<List<PostResponse>>> getLatestPosts(
+      @RequestParam(required = false) String keyword,
       @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
     Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
-    List<PostResponse> posts = postService.getLatestPosts(userId);
+    List<PostResponse> posts = postService.getLatestPosts(userId, keyword);
     return ResponseEntity.ok(responseUtils.success(posts));
   }
 
   @GetMapping("/search-category")
   public ResponseEntity<APIResponse<List<PostResponse>>> searchPostsByCategory(
       @RequestParam(required = false) Long categoryId,
+      @RequestParam(required = false) String keyword,
       @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
     Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
-    List<PostResponse> result = postService.searchPostsByCategory(categoryId, userId);
+    List<PostResponse> result = postService.searchPostsByCategory(categoryId, userId, keyword);
     return ResponseEntity.ok(responseUtils.success(result));
   }
 
@@ -187,8 +189,9 @@ public class PostController {
 
   @GetMapping("/hot-post")
   public ResponseEntity<APIResponse<List<PostResponse>>> hotPost(
+      @RequestParam(required = false) String keyword
   ) {
-    List<PostResponse> result = postService.hotPost();
+    List<PostResponse> result = postService.hotPost(keyword);
     return ResponseEntity.ok(responseUtils.success(result));
   }
   // Lấy bài đăng từ

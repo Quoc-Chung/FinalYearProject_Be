@@ -58,22 +58,18 @@ public interface PostService {
 
   PostResponse rejectPost(Long postId, String reason, Long adminId);
 
-  List<PostResponse> getLatestPosts();
-
-  List<PostResponse> searchPostsByCategory(Long categoryId);
-
   // Methods with userId for current user reaction
   Page<PostResponse> getPostsPage(Pageable pageable, Long userId);
 
   List<PostResponse> getApprovedPosts(String keyword, Long categoryId, Long brandId, String ward, String province, Long userId);
 
-  List<PostResponse> getLatestPosts(Long userId);
+  List<PostResponse> getLatestPosts(Long userId, String keyword);
 
-  List<PostResponse> searchPostsByCategory(Long categoryId, Long userId);
+  List<PostResponse> searchPostsByCategory(Long categoryId, Long userId, String keyword);
 
   PostDetailUser getPostDetailUser(Long postId);
 
-  List<PostResponse> hotPost();
+  List<PostResponse> hotPost(String keyword);
 
   List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status, String keyword);
 

@@ -599,20 +599,6 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> getLatestPosts() {
-    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
-        .stream()
-        .limit(20)
-        .map(this::mapToResponse)
-        .toList();
-  }
-
-  @Override
-  public List<PostResponse> searchPostsByCategory(Long categoryId) {
-    return searchPostsByCategory(categoryId, null);
-  }
-
-  @Override
   public Page<PostResponse> getPostsPage(Pageable pageable, Long userId) {
     return postRepository.findAll(pageable).map(post -> mapToResponse(post, userId));
   }
@@ -644,19 +630,32 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> getLatestPosts(Long userId) {
-    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
-        .stream()
+  public List<PostResponse> getLatestPosts(Long userId, String keyword) {
+    List<Post> posts = postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED);
+    
+    // Filter by keyword if provided
+    if (keyword != null && !keyword.isBlank()) {
+      String lowerKeyword = keyword.trim().toLowerCase();
+      posts = posts.stream()
+          .filter(p -> p.getTitle().toLowerCase().contains(lowerKeyword) ||
+                       (p.getDescription() != null && p.getDescription().toLowerCase().contains(lowerKeyword)))
+          .toList();
+    }
+    
+    return posts.stream()
         .limit(20)
         .map(post -> mapToResponse(post, userId))
         .toList();
   }
 
   @Override
-  public List<PostResponse> searchPostsByCategory(Long categoryId, Long userId) {
+  public List<PostResponse> searchPostsByCategory(Long categoryId, Long userId, String keyword) {
     Specification<Post> spec = Specification.where(PostSpecifications.hasStatus(PostStatus.APPROVED));
     if (categoryId != null) {
       spec = spec.and(PostSpecifications.hasCategoryId(categoryId));
+    }
+    if (keyword != null && !keyword.isBlank()) {
+      spec = spec.and(PostSpecifications.hasKeyword(keyword.trim()));
     }
     List<Post> posts = postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
     
@@ -880,8 +879,21 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> hotPost() {
+  public List<PostResponse> hotPost(String keyword) {
     List<Post> approvedPosts = postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED);
+
+    if (approvedPosts.isEmpty()) {
+      return List.of();
+    }
+
+    // Filter by keyword if provided
+    if (keyword != null && !keyword.isBlank()) {
+      String lowerKeyword = keyword.trim().toLowerCase();
+      approvedPosts = approvedPosts.stream()
+          .filter(p -> p.getTitle().toLowerCase().contains(lowerKeyword) ||
+                       (p.getDescription() != null && p.getDescription().toLowerCase().contains(lowerKeyword)))
+          .toList();
+    }
 
     if (approvedPosts.isEmpty()) {
       return List.of();
