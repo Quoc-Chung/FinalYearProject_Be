@@ -278,8 +278,8 @@ public class TabHomeServiceImpl implements TabHomeService {
 
     List<Post> posts = postRepository.findAll().stream()
         .filter(p -> p.getStatus() == PostStatus.APPROVED)
-        .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(startOfDay))
-        .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+        .filter(p -> p.getApprovedAt() != null && p.getApprovedAt().isAfter(startOfDay))
+        .sorted((a, b) -> b.getApprovedAt().compareTo(a.getApprovedAt()))
         .limit(limit)
         .collect(Collectors.toList());
 
@@ -330,8 +330,8 @@ public class TabHomeServiceImpl implements TabHomeService {
           .userAvatarUrl(post.getUser().getAvatarUrl())
           .countReaction(reactionCounts.getOrDefault(post.getPostId(), 0L))
           .countComment(commentCounts.getOrDefault(post.getPostId(), 0L))
-          .createdAt(post.getCreatedAt() != null ? post.getCreatedAt().toString() : "")
-          .relativeTime(formatRelativeTime(post.getCreatedAt()))
+          .createdAt(post.getApprovedAt() != null ? post.getApprovedAt().toString() : "")
+          .relativeTime(formatRelativeTime(post.getApprovedAt()))
           .build();
     }).collect(Collectors.toList());
   }

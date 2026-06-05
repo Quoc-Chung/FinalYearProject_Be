@@ -58,11 +58,11 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/post/post-detail-user/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/post/hot-post").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/post/user/**").permitAll()
-            // Category - public
+
             .requestMatchers(HttpMethod.GET, "/api/category/**").permitAll()
-            // Brand - public
+
             .requestMatchers(HttpMethod.GET, "/api/brand/**").permitAll()
-            // TabHome - public (following requires auth, but others don't)
+
             .requestMatchers(HttpMethod.GET, "/api/tabhome/popular-searches").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/tabhome/today-activity").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/tabhome/newest-posts").permitAll()

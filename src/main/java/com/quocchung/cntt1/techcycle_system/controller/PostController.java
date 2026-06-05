@@ -195,9 +195,10 @@ public class PostController {
   @GetMapping("/my-posts-by-status")
   public ResponseEntity<APIResponse<List<PostResponse>>> getMyPosts(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @RequestParam(required = false) PostStatus status
+      @RequestParam(required = false) PostStatus status,
+      @RequestParam(required = false) String keyword
   ) {
-    List<PostResponse> result = postService.getMyPostsByStatus(userPrincipal.getUserId(), status);
+    List<PostResponse> result = postService.getMyPostsByStatus(userPrincipal.getUserId(), status, keyword);
     return ResponseEntity.ok(responseUtils.success(result));
   }
 

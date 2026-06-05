@@ -29,6 +29,10 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
   List<Post> findByUserUserIdAndStatus(Long userId, PostStatus status);
 
+  List<Post> findByUserUserIdAndTitleContainingIgnoreCase(Long userId, String keyword);
+
+  List<Post> findByUserUserIdAndStatusAndTitleContainingIgnoreCase(Long userId, PostStatus status, String keyword);
+
   // Lấy bài viết gần đây nhất (cho dashboard)
   List<Post> findTop20ByDeletedAtIsNullOrderByCreatedAtDesc();
 

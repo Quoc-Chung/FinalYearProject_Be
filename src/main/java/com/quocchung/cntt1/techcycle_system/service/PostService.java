@@ -75,7 +75,7 @@ public interface PostService {
 
   List<PostResponse> hotPost();
 
-  List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status);
+  List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status, String keyword);
 
   PostResponse hidePost(Long postId, Long userId);
 

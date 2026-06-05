@@ -921,12 +921,20 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status) {
+  public List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status, String keyword) {
     List<Post> posts;
     if (status != null) {
-      posts = postRepository.findByUserUserIdAndStatus(userId, status);
+      if (keyword != null && !keyword.isBlank()) {
+        posts = postRepository.findByUserUserIdAndStatusAndTitleContainingIgnoreCase(userId, status, keyword.trim());
+      } else {
+        posts = postRepository.findByUserUserIdAndStatus(userId, status);
+      }
     } else {
-      posts = postRepository.findByUserUserId(userId);
+      if (keyword != null && !keyword.isBlank()) {
+        posts = postRepository.findByUserUserIdAndTitleContainingIgnoreCase(userId, keyword.trim());
+      } else {
+        posts = postRepository.findByUserUserId(userId);
+      }
     }
     return posts.stream()
         .map(post -> mapToResponse(post, userId))
