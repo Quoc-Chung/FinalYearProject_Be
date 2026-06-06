@@ -24,13 +24,13 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
-@RequiredArgsConstructor
 @ConditionalOnBean(MinioClient.class)
 @Slf4j
 public class MinIoServiceImpl implements MinIoService {
@@ -54,6 +54,21 @@ public class MinIoServiceImpl implements MinIoService {
   private long postImageMaxSizeBytes;
   @Value("${minio.post-video-max-size-bytes:104857600}")
   private long postVideoMaxSizeBytes;
+
+         // upload/delete (internal)
+  private final MinioClient publicMinioClient;    // presigned URL (external)
+
+  public MinIoServiceImpl(
+      MinioClient minioClient,
+      @Qualifier("publicMinioClient") MinioClient publicMinioClient,
+      MinioProperties minioProperties
+  ) {
+    this.minioClient = minioClient;
+    this.publicMinioClient = publicMinioClient;
+    this.minioProperties = minioProperties;
+  }
+
+
 
   @PostConstruct
   public void initBucket() {
@@ -269,11 +284,12 @@ public class MinIoServiceImpl implements MinIoService {
   @Override
   public PresignedUrlResponse generatePresignedPutUrl(String objectKey, String mimeType) {
     if (mimeType == null || !ALLOWED_PRESIGNED_MIME_TYPES.contains(mimeType.toLowerCase())) {
-      throw new ResException(ResErrorCode.BAD_REQUEST, "mimeType", "Unsupported media type: " + mimeType);
+      throw new ResException(ResErrorCode.BAD_REQUEST, "mimeType",
+          "Unsupported media type: " + mimeType);
     }
 
     try {
-      String presignedUrl = minioClient.getPresignedObjectUrl(
+      String presignedUrl = publicMinioClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
               .bucket(minioProperties.getBucketName())
               .object(objectKey)

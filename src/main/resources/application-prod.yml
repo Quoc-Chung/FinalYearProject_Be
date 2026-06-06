@@ -98,7 +98,7 @@ forgot-password:
 
 minio:
   enabled: ${MINIO_ENABLED:true}
-  endpoint: ${MINIO_ENDPOINT:http://62.171.174.204:9000}
+  endpoint: ${MINIO_ENDPOINT:http://minio:9000}
   public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://62.171.174.204:9000}
   access-key: ${MINIO_ACCESS_KEY}
   secret-key: ${MINIO_SECRET_KEY}
