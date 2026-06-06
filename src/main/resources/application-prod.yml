@@ -14,10 +14,10 @@ spring:
     show-sql: true
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    host: smtp.gmail.com
+    port: 587
+    username: tuquocchung@gmail.com
+    password: ullxepwbfpqiivll
     protocol: smtp
     properties:
       mail:
@@ -29,7 +29,6 @@ spring:
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
-
   security:
     oauth2:
       client:
@@ -99,8 +98,8 @@ forgot-password:
 
 minio:
   enabled: ${MINIO_ENABLED:true}
-  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://localhost:9000}
+  endpoint: ${MINIO_ENDPOINT:http://62.171.174.204:9000}
+  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://62.171.174.204:9000}
   access-key: ${MINIO_ACCESS_KEY}
   secret-key: ${MINIO_SECRET_KEY}
   bucket-name: ${MINIO_BUCKET_NAME:techcycle}
