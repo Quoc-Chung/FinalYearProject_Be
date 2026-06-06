@@ -273,21 +273,26 @@ public class MinIoServiceImpl implements MinIoService {
     }
 
     try {
+      long expirySeconds = 900;
+      Map<String, String> reqParams = new java.util.HashMap<>();
+      reqParams.put("Content-Type", mimeType);
       String presignedUrl = minioClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
               .bucket(minioProperties.getBucketName())
               .object(objectKey)
               .method(Method.PUT)
-              .expiry(15, TimeUnit.MINUTES)
-              .extraHeaders(Map.of("Content-Type", mimeType))
+              .expiry((int) expirySeconds, TimeUnit.SECONDS)
+              .extraQueryParams(reqParams)
               .build()
       );
 
+      String publicUrl = buildPresignedUrl(presignedUrl, objectKey);
+
       return PresignedUrlResponse.builder()
-          .presignedUrl(presignedUrl)
+          .presignedUrl(publicUrl)
           .objectKey(objectKey)
           .publicUrl(buildObjectUrl(objectKey))
-          .expiresInSeconds(900L)
+          .expiresInSeconds(expirySeconds)
           .build();
 
     } catch (ResException ex) {
@@ -296,5 +301,32 @@ public class MinIoServiceImpl implements MinIoService {
       log.error("Failed to generate presigned URL for objectKey={}: {}", objectKey, ex.getMessage());
       throw new ResException(ResErrorCode.GENERAL_ERROR, "Cannot generate presigned URL");
     }
+  }
+
+  private String buildPresignedUrl(String internalPresignedUrl, String objectKey) {
+    String internalEndpoint = minioProperties.getEndpoint();
+    String publicEndpoint = minioProperties.getPublicEndpoint();
+
+    if (publicEndpoint == null || publicEndpoint.isBlank()) {
+      publicEndpoint = internalEndpoint;
+    }
+
+    // Normalize endpoints
+    String normalizedInternal = internalEndpoint.endsWith("/")
+        ? internalEndpoint.substring(0, internalEndpoint.length() - 1)
+        : internalEndpoint;
+    String normalizedPublic = publicEndpoint.endsWith("/")
+        ? publicEndpoint.substring(0, publicEndpoint.length() - 1)
+        : publicEndpoint;
+
+    // Replace internal endpoint with public endpoint in presigned URL
+    if (internalPresignedUrl.startsWith(normalizedInternal)) {
+      return internalPresignedUrl.replaceFirst(
+          java.util.regex.Pattern.quote(normalizedInternal),
+          normalizedPublic
+      );
+    }
+
+    return internalPresignedUrl;
   }
 }
