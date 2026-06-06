@@ -10,6 +10,7 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadRes
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Seller.SellerProfileResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.TrustScoreResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.TopSellerResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.mapper.UserMapper;
@@ -19,13 +20,16 @@ import com.quocchung.cntt1.techcycle_system.model.PostImage;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserImage;
 import com.quocchung.cntt1.techcycle_system.repository.AddressRepository;
+import com.quocchung.cntt1.techcycle_system.repository.CommentRepository;
 import com.quocchung.cntt1.techcycle_system.repository.ConversationRepository;
+import com.quocchung.cntt1.techcycle_system.repository.PostReactionRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostReportRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserFollowRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserImageRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
+import com.quocchung.cntt1.techcycle_system.repository.UserRoleRepository;
 import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.Converter;
@@ -38,8 +42,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -59,7 +65,10 @@ public class UserServiceImpl implements UserService {
   private final UserReviewRepository userReviewRepository;
   private final ConversationRepository conversationRepository;
   private final PostReportRepository postReportRepository;
+  private final PostReactionRepository postReactionRepository;
+  private final CommentRepository commentRepository;
   private final MinioProperties minioProperties;
+  private final UserRoleRepository userRoleRepository;
 
   private String buildPublicUrl(String objectKey) {
     String base = minioProperties.getPublicEndpoint();
@@ -331,18 +340,33 @@ public class UserServiceImpl implements UserService {
 
     List<Post> activePosts = postRepository.findByUserUserIdAndStatus(userId, PostStatus.APPROVED);
     NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+
+    List<Long> postIds = activePosts.stream().map(Post::getPostId).collect(Collectors.toList());
+    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+    Map<Long, Long> commentCounts = commentRepository.countCommentsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
     List<SellerProfileResponse.SellerListing> listings = activePosts.stream()
         .limit(10)
         .map(post -> {
           String formattedPrice = currencyFormat.format(post.getPrice()).replace("₫", "") + "₫";
           String postedAt = formatRelativeTime(post.getCreatedAt());
 
-          String imageUrl = null;
+          String thumbnailUrl = null;
+          String mediaType = null;
           if (post.getImages() != null && !post.getImages().isEmpty()) {
-            PostImage firstImage = post.getImages().stream().findFirst().orElse(null);
-            if (firstImage != null && firstImage.getObjectKey() != null) {
-              imageUrl = firstImage.getObjectKey();
-            }
+            PostImage firstImage = post.getImages().get(0);
+            thumbnailUrl = buildPublicUrl(firstImage.getObjectKey());
+            mediaType = firstImage.getMediaType() != null ? firstImage.getMediaType().name() : "IMAGE";
           }
 
           return SellerProfileResponse.SellerListing.builder()
@@ -351,7 +375,10 @@ public class UserServiceImpl implements UserService {
               .price(post.getPrice())
               .formattedPrice(formattedPrice)
               .postedAt(postedAt)
-              .image(buildPublicUrl(imageUrl))
+              .thumbnailUrl(thumbnailUrl)
+              .mediaType(mediaType)
+              .countReaction(reactionCounts.getOrDefault(post.getPostId(), 0L))
+              .countComment(commentCounts.getOrDefault(post.getPostId(), 0L))
               .build();
         })
         .collect(Collectors.toList());
@@ -414,5 +441,27 @@ public class UserServiceImpl implements UserService {
     } else {
       return (days / 365) + " năm trước";
     }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<TopSellerResponse> getTopSellersByPostCount(int limit) {
+    List<User> topUsers = userRepository.findTopSellersByPostCount(
+       PageRequest.of(0, limit));
+
+    return topUsers.stream()
+        .filter(user -> !Boolean.TRUE.equals(
+            userRoleRepository.checkUserIsAdmin(user.getUserId(), "ADMIN")))
+        .map(user -> {
+          long followerCount = userFollowRepository.countFollowersByUserId(user.getUserId());
+          return TopSellerResponse.builder()
+              .userId(user.getUserId())
+              .fullName(user.getFullName())
+              .countPost((int) postRepository.countByUserUserId(user.getUserId()))
+              .countFollower(followerCount)
+              .avatarUrl(user.getAvatarUrl())
+              .build();
+        })
+        .collect(Collectors.toList());
   }
 }

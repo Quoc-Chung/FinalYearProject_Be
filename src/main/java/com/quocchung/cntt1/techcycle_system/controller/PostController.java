@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -162,20 +163,22 @@ public class PostController {
 
   @GetMapping("/get-latest-posts")
   public ResponseEntity<APIResponse<List<PostResponse>>> getLatestPosts(
+      @RequestParam(required = false) String keyword,
       @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
     Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
-    List<PostResponse> posts = postService.getLatestPosts(userId);
+    List<PostResponse> posts = postService.getLatestPosts(userId, keyword);
     return ResponseEntity.ok(responseUtils.success(posts));
   }
 
   @GetMapping("/search-category")
   public ResponseEntity<APIResponse<List<PostResponse>>> searchPostsByCategory(
       @RequestParam(required = false) Long categoryId,
+      @RequestParam(required = false) String keyword,
       @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
     Long userId = userPrincipal != null ? userPrincipal.getUserId() : null;
-    List<PostResponse> result = postService.searchPostsByCategory(categoryId, userId);
+    List<PostResponse> result = postService.searchPostsByCategory(categoryId, userId, keyword);
     return ResponseEntity.ok(responseUtils.success(result));
   }
 
@@ -186,17 +189,19 @@ public class PostController {
 
   @GetMapping("/hot-post")
   public ResponseEntity<APIResponse<List<PostResponse>>> hotPost(
+      @RequestParam(required = false) String keyword
   ) {
-    List<PostResponse> result = postService.hotPost();
+    List<PostResponse> result = postService.hotPost(keyword);
     return ResponseEntity.ok(responseUtils.success(result));
   }
   // Lấy bài đăng từ
   @GetMapping("/my-posts-by-status")
   public ResponseEntity<APIResponse<List<PostResponse>>> getMyPosts(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @RequestParam(required = false) PostStatus status
+      @RequestParam(required = false) PostStatus status,
+      @RequestParam(required = false) String keyword
   ) {
-    List<PostResponse> result = postService.getMyPostsByStatus(userPrincipal.getUserId(), status);
+    List<PostResponse> result = postService.getMyPostsByStatus(userPrincipal.getUserId(), status, keyword);
     return ResponseEntity.ok(responseUtils.success(result));
   }
 
@@ -239,6 +244,20 @@ public class PostController {
   ) {
     return ResponseEntity.ok(responseUtils.success(
         postService.unhidePost(id, userPrincipal.getUserId())));
+  }
+
+  @GetMapping("/pending")
+  @PreAuthorize("hasAnyRole('ADMIN')")
+  public ResponseEntity<APIResponse<PostResponse>> getPendingPosts(
+      @RequestParam(required = false) String keyword,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size
+  ) {
+    int pageIndex = Math.max(1, page) - 1;
+    Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    Page<PostResponse> result = postService.getPendingPosts(keyword, pageable);
+    return ResponseEntity.ok(responseUtils.successPage(
+        result.getContent(), result.getNumber() + 1, result.getTotalElements(), result.getSize()));
   }
 
 }

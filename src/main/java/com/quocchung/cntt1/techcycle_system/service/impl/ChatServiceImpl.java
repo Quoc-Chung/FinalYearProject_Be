@@ -196,6 +196,36 @@ public class ChatServiceImpl implements ChatService {
 
     sendChatNotification(conversation, sender, message);
 
+    // Gửi thông báo cho admin khi có tin nhắn mới (nếu sender không phải admin)
+    boolean isAdminSender = userRepository.hasRole(sender.getUserId(), "ADMIN");
+    if (!isAdminSender) {
+      List<User> admins = userRepository.getAllAdmin();
+      for (User admin : admins) {
+        String title = "Tin nhắn mới từ người dùng";
+        String content = sender.getFullName() + ": " +
+            (message.getContent() != null && !message.getContent().isBlank()
+                ? (message.getContent().length() > 50
+                    ? message.getContent().substring(0, 50) + "..."
+                    : message.getContent())
+                : "Đã gửi tệp đính kèm");
+        String targetUrl = "/admin/messages/" + conversationId;
+        java.util.Map<String, Object> notiData = new java.util.HashMap<>();
+        notiData.put("conversationId", conversationId);
+        notiData.put("senderId", sender.getUserId());
+        notiData.put("senderName", sender.getFullName());
+
+        notificationService.createNotification(
+            admin,
+            sender,
+            NotificationType.CHAT_MESSAGE,
+            title,
+            content,
+            targetUrl,
+            notiData
+        );
+      }
+    }
+
     return ChatMessageResponse.fromEntityWithAttachments(message, attachments);
   }
 
@@ -395,12 +425,26 @@ public class ChatServiceImpl implements ChatService {
     });
   }
 
+
+
+
+
+
+
+
   @Override
   @Transactional
-  public ConversationResponse createConversationWithAdmin(Long userId, Long adminId) {
+  public ConversationResponse createConversationWithAdmin(Long userId) {
+    // Find any admin user
+    List<User> admins = userRepository.findAllByRoleName("ADMIN");
+    if (admins.isEmpty()) {
+      throw new ResException(ResErrorCode.USER_NOT_FOUND);
+    }
+    User admin = admins.get(0);
+
     // Check if conversation already exists
     Optional<Conversation> existingConversation = conversationRepository
-        .findDirectConversation(userId, adminId, 2);
+        .findDirectConversation(userId, admin.getUserId(), 2);
 
     if (existingConversation.isPresent()) {
       Conversation conversation = existingConversation.get();
@@ -415,8 +459,6 @@ public class ChatServiceImpl implements ChatService {
 
     // Create new conversation
     User user = userRepository.findById(userId)
-        .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
-    User admin = userRepository.findById(adminId)
         .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
 
     Conversation conversation = Conversation.builder()

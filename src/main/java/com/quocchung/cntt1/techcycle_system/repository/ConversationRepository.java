@@ -57,9 +57,13 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
    * Tìm cuộc trò chuyện trực tiếp giữa 2 người dùng (chat 1-1).
    */
   @Query("SELECT c FROM Conversation c " +
-         "WHERE (SELECT COUNT(cp) FROM ConversationParticipant cp WHERE cp.conversation = c) = :size " +
-         "AND :userId1 IN (SELECT cp1.user.userId FROM ConversationParticipant cp1 WHERE cp1.conversation = c) " +
-         "AND :userId2 IN (SELECT cp2.user.userId FROM ConversationParticipant cp2 WHERE cp2.conversation = c)")
+         "WHERE c.conversationId IN " +
+         "  (SELECT cp1.conversation.conversationId FROM ConversationParticipant cp1 " +
+         "   WHERE cp1.user.userId = :userId1 " +
+         "   AND cp1.conversation.conversationId IN " +
+         "     (SELECT cp2.conversation.conversationId FROM ConversationParticipant cp2 " +
+         "      WHERE cp2.user.userId = :userId2)) " +
+         "AND (SELECT COUNT(cp) FROM ConversationParticipant cp WHERE cp.conversation = c) = :size")
   Optional<Conversation> findDirectConversation(
       @Param("userId1") Long userId1,
       @Param("userId2") Long userId2,

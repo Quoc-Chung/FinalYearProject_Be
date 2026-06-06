@@ -26,6 +26,8 @@ public interface NotificationService {
 
   void sendRealTimeNotification(User recipient, NotificationResponse notification);
 
+  void sendNotificationToAdminTopic(NotificationResponse notification);
+
   Page<NotificationResponse> getNotifications(Long userId, Pageable pageable);
 
   Page<NotificationResponse> getNotificationsByReadStatus(Long userId, Boolean isRead, Pageable pageable);

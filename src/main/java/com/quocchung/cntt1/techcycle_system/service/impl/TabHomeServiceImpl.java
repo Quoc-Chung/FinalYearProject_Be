@@ -6,7 +6,9 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.PostUserFollow
 import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.SearchPopularResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.SuggestedSellerResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.TodayActivityResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.NewestPostSidebarResponse;
 import com.quocchung.cntt1.techcycle_system.model.Post;
+import com.quocchung.cntt1.techcycle_system.model.PostImage;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserFollow;
 import com.quocchung.cntt1.techcycle_system.repository.CommentRepository;
@@ -20,8 +22,10 @@ import com.quocchung.cntt1.techcycle_system.service.TabHomeService;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.text.NumberFormat;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -218,8 +222,23 @@ public class TabHomeServiceImpl implements TabHomeService {
   public TodayActivityResponse getTodayActivity() {
     LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
 
-    long countPostToday = postRepository.findAll().stream()
+    // Lấy tất cả posts để kiểm tra approvedAt và updatedAt
+    List<Post> allPosts = postRepository.findAll();
+
+    // Đếm các bài được tạo hôm nay
+    long countPostToday = allPosts.stream()
         .filter(p -> p.getCreatedAt() != null && p.getCreatedAt().isAfter(startOfDay))
+        .count();
+
+    // Đếm các bài được duyệt hôm nay (approvedAt hôm nay, không phụ thuộc ngày tạo)
+    long countApproved = allPosts.stream()
+        .filter(p -> p.getApprovedAt() != null && p.getApprovedAt().isAfter(startOfDay))
+        .count();
+
+    // Đếm các bài bị từ chối hôm nay (updatedAt hôm nay và status là REJECTED)
+    long countRejected = allPosts.stream()
+        .filter(p -> p.getStatus() != null && p.getStatus().equals(PostStatus.REJECTED))
+        .filter(p -> p.getUpdatedAt() != null && p.getUpdatedAt().isAfter(startOfDay))
         .count();
 
     long newUserCount = userRepository.findAll().stream()
@@ -237,6 +256,8 @@ public class TabHomeServiceImpl implements TabHomeService {
         .newUser(newUserCount)
         .countReaction(reactionCount)
         .numberOfVisits(visitCount)
+        .countApproved(countApproved)
+        .countRejected(countRejected)
         .build();
   }
 
@@ -249,6 +270,82 @@ public class TabHomeServiceImpl implements TabHomeService {
       base = base.substring(0, base.length() - 1);
     }
     return base + "/" + minioProperties.getBucketName() + "/" + objectKey;
+  }
+
+  @Override
+  public List<NewestPostSidebarResponse> getNewestPostsForSidebar(int limit) {
+    LocalDateTime startOfDay = LocalDateTime.now().with(LocalTime.MIN);
+
+    List<Post> posts = postRepository.findAll().stream()
+        .filter(p -> p.getStatus() == PostStatus.APPROVED)
+        .filter(p -> p.getApprovedAt() != null && p.getApprovedAt().isAfter(startOfDay))
+        .sorted((a, b) -> b.getApprovedAt().compareTo(a.getApprovedAt()))
+        .limit(limit)
+        .collect(Collectors.toList());
+
+    if (posts.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    List<Long> postIds = posts.stream().map(Post::getPostId).collect(Collectors.toList());
+
+    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    Map<Long, Long> commentCounts = commentRepository.countCommentsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+
+    return posts.stream().map(post -> {
+      String thumbnailUrl = null;
+      String mediaType = null;
+      if (post.getImages() != null && !post.getImages().isEmpty()) {
+        PostImage firstImage = post.getImages().get(0);
+        thumbnailUrl = buildPublicUrl(firstImage.getObjectKey());
+        mediaType = firstImage.getMediaType() != null ? firstImage.getMediaType().name() : "IMAGE";
+      }
+
+      String formattedPrice = post.getPrice() != null
+          ? currencyFormat.format(post.getPrice()).replace("₫", "") + "₫"
+          : "Liên hệ";
+
+      return NewestPostSidebarResponse.builder()
+          .postId(post.getPostId())
+          .title(post.getTitle())
+          .price(post.getPrice() != null ? post.getPrice().longValue() : 0L)
+          .formattedPrice(formattedPrice)
+          .thumbnailUrl(thumbnailUrl)
+          .mediaType(mediaType)
+          .userId(post.getUser().getUserId())
+          .userFullName(post.getUser().getFullName())
+          .userAvatarUrl(post.getUser().getAvatarUrl())
+          .countReaction(reactionCounts.getOrDefault(post.getPostId(), 0L))
+          .countComment(commentCounts.getOrDefault(post.getPostId(), 0L))
+          .createdAt(post.getApprovedAt() != null ? post.getApprovedAt().toString() : "")
+          .relativeTime(formatRelativeTime(post.getApprovedAt()))
+          .build();
+    }).collect(Collectors.toList());
+  }
+
+  private String formatRelativeTime(LocalDateTime dateTime) {
+    if (dateTime == null) return "Vừa xong";
+    LocalDateTime now = LocalDateTime.now();
+    long minutes = java.time.Duration.between(dateTime, now).toMinutes();
+    long hours = java.time.Duration.between(dateTime, now).toHours();
+    long days = java.time.Duration.between(dateTime, now).toDays();
+    if (minutes < 1) return "Vừa xong";
+    if (minutes < 60) return minutes + " phút trước";
+    if (hours < 24) return hours + " giờ trước";
+    return days + " ngày trước";
   }
 
 }

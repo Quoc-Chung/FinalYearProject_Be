@@ -15,12 +15,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByEmail(String email);
   boolean existsByEmail(String email);
 
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Transactional
-  @Query("UPDATE User u SET u.isFirstLogin = false WHERE u.userId = :id AND u.isFirstLogin = true")
-  int markFirstLoginDone(@Param("id") Long id);
 
-  @Query("SELECT DISTINCT u FROM User u JOIN UserRole ur ON ur.user = u JOIN Role r ON ur.role = r WHERE r.name = :roleName")
+  @Query("SELECT DISTINCT u FROM User u WHERE u.userId IN " +
+         "(SELECT ur.user.userId FROM UserRole ur WHERE ur.role.name = :roleName)")
   List<User> findAllByRoleName(@Param("roleName") String roleName);
 
   @Query("SELECT CASE WHEN COUNT(ur) > 0 THEN true ELSE false END FROM UserRole ur " +
@@ -29,4 +26,29 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
   @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL ORDER BY u.createdAt DESC")
   List<User> findRecentUsers(org.springframework.data.domain.Pageable pageable);
+
+  @Query(
+      "SELECT u FROM User u "
+      + "INNER JOIN UserRole ur ON ur.user.userId = u.userId "
+      + "INNER JOIN ur.role "
+      + "WHERE ur.role.name = 'ADMIN'"
+  )
+  List<User> getAllAdmin();
+
+  @Query(value = "SELECT u.* FROM users u " +
+         "LEFT JOIN posts p ON u.user_id = p.user_id AND p.delete_at IS NULL " +
+         "WHERE u.deleted_at IS NULL AND u.status = 'ACTIVE' " +
+         "GROUP BY u.user_id " +
+         "ORDER BY COUNT(p.post_id) DESC",
+         countQuery = "SELECT COUNT(DISTINCT u.user_id) FROM users u WHERE u.deleted_at IS NULL AND u.status = 'ACTIVE'",
+         nativeQuery = true)
+  List<User> findTopSellersByPostCount(org.springframework.data.domain.Pageable pageable);
+
+  @Query("""
+        SELECT p.user
+        FROM Post p
+        WHERE p.postId = :postId
+    """)
+  Optional<User> getUserByPostId(@Param("postId") Long postId);
+
 }

@@ -35,12 +35,15 @@
       u.created_at,
       u.updated_at
     FROM users u
+    INNER JOIN user_roles ur ON ur.user_id = u.user_id
+    INNER JOIN roles r ON r.role_id = ur.role_id
     <where>
+      r.name = 'USER'
       <if test="searchText != null and searchText != ''">
         AND (
-          LOWER(u.email) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
-          OR LOWER(u.full_name) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
-          OR LOWER(u.phone) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+        LOWER(u.email) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+        OR LOWER(u.full_name) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
+        OR LOWER(u.phone) LIKE LOWER(CONCAT('%', #{searchText}, '%'))
         )
       </if>
       <if test="status != null and status != ''">

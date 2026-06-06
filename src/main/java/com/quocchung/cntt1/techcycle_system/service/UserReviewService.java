@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 public interface UserReviewService {
   ReviewResponse reviewUser(Long fromUserId, Long toUserId, ReviewRequest request);
 
-  // Lấy danh sách review của một user
   Page<ReviewResponse> getReviews(Long userId, int page, int size);
+
+  boolean hasTransactionWithUser(Long userId1, Long userId2);
 }

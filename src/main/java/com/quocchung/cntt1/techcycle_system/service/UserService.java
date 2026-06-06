@@ -8,6 +8,8 @@ import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Seller.SellerProfileResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.TrustScoreResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.TopSellerResponse;
+import java.util.List;
 
 public interface UserService {
   UserResponse updateMe(String email, UserRequest request);
@@ -23,4 +25,6 @@ public interface UserService {
   TrustScoreResponse getTrustScore(Long userId);
 
   double calculateTrustScore(Long userId);
+
+  List<TopSellerResponse> getTopSellersByPostCount(int limit);
 }

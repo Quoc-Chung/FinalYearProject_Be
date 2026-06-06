@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class TodayActivityResponse {
     private Long countPort;
-    private Long  newUser;
-    private Long  countReaction;  // số luopwjt tương tasc của tất cả bài viết trong hoome nay
-    private Long  numberOfVisits; // số lượt truy cập
-
-
+    private Long newUser;
+    private Long countReaction;
+    private Long numberOfVisits;
+    private Long countApproved;
+    private Long countRejected;
 }

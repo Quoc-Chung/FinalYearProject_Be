@@ -45,8 +45,34 @@ public class SecurityConfig {
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/auth/**").permitAll()
+
             .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+
             .requestMatchers("/ws/**").permitAll()
+
+            .requestMatchers(HttpMethod.GET, "/api/post/page").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/post/all-post-data").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/post/search").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/post/get-latest-posts").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/post/search-category").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/post/post-detail-user/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/post/hot-post").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/post/user/**").permitAll()
+
+            .requestMatchers(HttpMethod.GET, "/api/category/**").permitAll()
+
+            .requestMatchers(HttpMethod.GET, "/api/brand/**").permitAll()
+
+            .requestMatchers(HttpMethod.GET, "/api/tabhome/popular-searches").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/tabhome/today-activity").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/tabhome/newest-posts").permitAll()
+            // User public profile
+            .requestMatchers(HttpMethod.GET, "/api/user/profile/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/user/seller-info/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/user/trust-score/**").permitAll()
+            // Reactions - public (view reactions without login)
+            .requestMatchers(HttpMethod.GET, "/api/reactions/post/**").permitAll()
+            // All other requests require authentication
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider())

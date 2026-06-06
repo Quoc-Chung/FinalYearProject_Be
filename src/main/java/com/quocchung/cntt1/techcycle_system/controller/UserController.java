@@ -8,6 +8,7 @@ import com.quocchung.cntt1.techcycle_system.dtos.request.User.UserRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Seller.SellerProfileResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.User.TrustScoreResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.TabHome.TopSellerResponse;
 import com.quocchung.cntt1.techcycle_system.security.UserPrincipal;
 import com.quocchung.cntt1.techcycle_system.service.UserService;
 import com.quocchung.cntt1.techcycle_system.utils.PageResponseUtil;
@@ -17,6 +18,7 @@ import com.quocchung.cntt1.techcycle_system.utils.response.PageResponse;
 import com.quocchung.cntt1.techcycle_system.utils.response.ResponseStatus;
 import jakarta.validation.Valid;
 import java.util.Collections;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -105,6 +107,12 @@ public class UserController {
     return responseUtils.success(userMetadataResponse);
   }
 
+  @GetMapping("/metadata/{userId}")
+  public APIResponse<UserMetadataResponse> getUserMetadataById(@PathVariable Long userId) {
+    UserMetadataResponse userMetadataResponse = userService.getUserMetadata(userId);
+    return responseUtils.success(userMetadataResponse);
+  }
+
   @GetMapping("/seller/{userId}")
   public APIResponse<SellerProfileResponse> getSellerProfile(@PathVariable Long userId) {
     SellerProfileResponse sellerProfile = userService.getSellerProfile(userId);
@@ -115,5 +123,13 @@ public class UserController {
   public APIResponse<TrustScoreResponse> getTrustScore(@PathVariable Long userId) {
     TrustScoreResponse trustScore = userService.getTrustScore(userId);
     return responseUtils.success(trustScore);
+  }
+
+  @GetMapping("/top-sellers")
+  public APIResponse<TopSellerResponse> getTopSellers(
+      @RequestParam(defaultValue = "5") Integer limit
+  ) {
+    List<TopSellerResponse> topSellers = userService.getTopSellersByPostCount(limit);
+    return responseUtils.successList(topSellers);
   }
 }

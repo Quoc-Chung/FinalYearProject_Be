@@ -154,7 +154,7 @@ public class AuthServiceImpl implements AuthService {
       case INACTIVE -> throw new ResException(ResErrorCode.USER_NOT_ACTIVE, "Tài khoản chưa được kích hoạt");
       case BANNED -> throw new ResException(ResErrorCode.USER_BANNED, "Tài khoản đã bị khóa");
       case DELETED -> throw new ResException(ResErrorCode.USER_DELETED, "Tài khoản đã bị xóa");
-      case ACTIVE -> {} // Cho phép đăng nhập
+      case ACTIVE -> {}
     }
     AuthSessionResponse session = issueSession(user, appNormalize.normalizeDeviceId(deviceId));
     return session;

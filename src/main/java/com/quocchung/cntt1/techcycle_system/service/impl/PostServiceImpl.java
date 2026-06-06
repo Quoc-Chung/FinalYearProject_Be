@@ -111,6 +111,7 @@ public class PostServiceImpl implements PostService {
         .status(PostStatus.PENDING)
         .category(category)
         .brand(brand)
+        .createdAt(LocalDateTime.now())
         .address(address)
         .user(author)
         .build();
@@ -174,15 +175,37 @@ public class PostServiceImpl implements PostService {
             .tag(tag)
             .build());
       }
-      postTagRepository.saveAll(postTags);
-      post.getPostTags().addAll(postTags);
+        postTagRepository.saveAll(postTags);
+        post.getPostTags().addAll(postTags);
+      }
+
+      // Gửi thông báo cho tất cả admin khi có bài viết mới
+      List<User> admins = userRepository.getAllAdmin();
+      for (User admin : admins) {
+        String title = "Bài viết mới cần duyệt";
+        String content = author.getFullName() + " đã tạo bài viết \"" + post.getTitle() + "\" cần được duyệt";
+        String targetUrl = "/admin/posts/pending";
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("postId", post.getPostId());
+        data.put("postTitle", post.getTitle());
+        data.put("authorName", author.getFullName());
+
+        notificationService.createNotification(
+            admin,
+            author,
+            NotificationType.POST_PENDING,
+            title,
+            content,
+            targetUrl,
+            data
+        );
+      }
+
+      return mapToResponse(post);
     }
 
-    return mapToResponse(post);
-  }
-
-  @Override
-  public PostResponse getPost(Long id) {
+    @Override
+    public PostResponse getPost(Long id) {
     Post post = postRepository.findById(id)
         .orElseThrow(() -> new ResException(ResErrorCode.POST_NOT_FOUND));
     return mapToResponse(post);
@@ -197,6 +220,8 @@ public class PostServiceImpl implements PostService {
     if (!post.getUser().getUserId().equals(userId)) {
       throw new ResException(ResErrorCode.PERMISSION_DENIED);
     }
+
+    post.setStatus(PostStatus.PENDING);
 
     if (request.getTitle() != null) {
       post.setTitle(request.getTitle());
@@ -229,10 +254,8 @@ public class PostServiceImpl implements PostService {
           .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS));
       post.setAddress(address);
     }
-
+    post.setUpdatedAt(LocalDateTime.now());
     postRepository.save(post);
-
-
     post.getImages().clear();
     post.getAttributes().clear();
     post.getPostTags().clear();
@@ -279,6 +302,11 @@ public class PostServiceImpl implements PostService {
     }
 
     if (request.getTagNames() != null && !request.getTagNames().isEmpty()) {
+      // Xóa các tag cũ trong database trước khi thêm mới
+      postTagRepository.deleteAll(post.getPostTags());
+      post.getPostTags().clear();
+      postRepository.saveAndFlush(post);
+
       List<PostTag> postTags = new ArrayList<>();
       for (String tagName : request.getTagNames()) {
         String slug = slugify(tagName);
@@ -296,6 +324,10 @@ public class PostServiceImpl implements PostService {
       }
       postTagRepository.saveAll(postTags);
       post.getPostTags().addAll(postTags);
+    } else {
+      // Nếu không có tag mới, xóa hết tag cũ
+      postTagRepository.deleteAll(post.getPostTags());
+      post.getPostTags().clear();
     }
 
     return mapToResponse(post);
@@ -566,20 +598,6 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> getLatestPosts() {
-    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
-        .stream()
-        .limit(20)
-        .map(this::mapToResponse)
-        .toList();
-  }
-
-  @Override
-  public List<PostResponse> searchPostsByCategory(Long categoryId) {
-    return searchPostsByCategory(categoryId, null);
-  }
-
-  @Override
   public Page<PostResponse> getPostsPage(Pageable pageable, Long userId) {
     return postRepository.findAll(pageable).map(post -> mapToResponse(post, userId));
   }
@@ -611,47 +629,59 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> getLatestPosts(Long userId) {
-    return postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED)
-        .stream()
+  public List<PostResponse> getLatestPosts(Long userId, String keyword) {
+    List<Post> posts = postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED);
+    
+    // Filter by keyword if provided
+    if (keyword != null && !keyword.isBlank()) {
+      String lowerKeyword = keyword.trim().toLowerCase();
+      posts = posts.stream()
+          .filter(p -> p.getTitle().toLowerCase().contains(lowerKeyword) ||
+                       (p.getDescription() != null && p.getDescription().toLowerCase().contains(lowerKeyword)))
+          .toList();
+    }
+    
+    return posts.stream()
         .limit(20)
         .map(post -> mapToResponse(post, userId))
         .toList();
   }
 
   @Override
-  public List<PostResponse> searchPostsByCategory(Long categoryId, Long userId) {
+  public List<PostResponse> searchPostsByCategory(Long categoryId, Long userId, String keyword) {
     Specification<Post> spec = Specification.where(PostSpecifications.hasStatus(PostStatus.APPROVED));
     if (categoryId != null) {
       spec = spec.and(PostSpecifications.hasCategoryId(categoryId));
     }
-    return postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
+    if (keyword != null && !keyword.isBlank()) {
+      spec = spec.and(PostSpecifications.hasKeyword(keyword.trim()));
+    }
+    List<Post> posts = postRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
+    
+    // Batch fetch reaction counts
+    List<Long> postIds = posts.stream().map(Post::getPostId).toList();
+    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(postIds)
         .stream()
-        .map(post -> mapToResponse(post, userId))
+        .collect(java.util.stream.Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+    Map<Long, String> topReactions = postReactionRepository.countReactionsByPostIdsGroupByType(postIds)
+        .stream()
+        .collect(java.util.stream.Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> ((com.quocchung.cntt1.techcycle_system.utils.enums.ReactionType) arr[1]).name(),
+            (existing, replacement) -> existing // keep first if duplicate
+        ));
+    
+    return posts.stream()
+        .map(post -> mapToResponse(post, userId, 
+            reactionCounts.getOrDefault(post.getPostId(), 0L),
+            topReactions.get(post.getPostId())))
         .toList();
   }
 
-  private String slugify(String input) {
-    return input.trim()
-        .toLowerCase()
-        .replaceAll("[^a-z0-9\\s-]", "")
-        .replaceAll("\\s+", "-");
-  }
-  private List<Long> getAllCategoryIds(Long parentId) {
-
-    List<Long> ids = new ArrayList<>();
-    ids.add(parentId);
-    List<Category> children = categoryRepository
-        .findByParent_CategoryId(parentId);
-    ids.addAll(
-        children.stream()
-            .map(Category::getCategoryId)
-            .toList()
-    );
-    return ids;
-  }
-
-  private PostResponse mapToResponse(Post post, Long userId) {
+  private PostResponse mapToResponse(Post post, Long userId, Long reactionCount, String topReaction) {
     ReactionType currentUserReaction = null;
     if (userId != null) {
       Optional<PostReaction> reaction = postReactionRepository.findByPostPostIdAndUserUserId(post.getPostId(), userId);
@@ -674,6 +704,8 @@ public class PostServiceImpl implements PostService {
         .approvedAt(post.getApprovedAt())
         .rejectedReason(post.getRejectedReason())
         .currentUserReaction(currentUserReaction != null ? currentUserReaction.name() : null)
+        .reactionCount(reactionCount)
+        .topReaction(topReaction)
         .category(post.getCategory() == null ? null :
             PostResponse.CategoryInfo.builder()
                 .categoryId(post.getCategory().getCategoryId())
@@ -729,8 +761,32 @@ public class PostServiceImpl implements PostService {
         .build();
   }
 
+  private PostResponse mapToResponse(Post post, Long userId) {
+    return mapToResponse(post, userId, 0L, null);
+  }
+
   private PostResponse mapToResponse(Post post) {
     return mapToResponse(post, null);
+  }
+
+  private String slugify(String input) {
+    return input.trim()
+        .toLowerCase()
+        .replaceAll("[^a-z0-9\\s-]", "")
+        .replaceAll("\\s+", "-");
+  }
+  private List<Long> getAllCategoryIds(Long parentId) {
+
+    List<Long> ids = new ArrayList<>();
+    ids.add(parentId);
+    List<Category> children = categoryRepository
+        .findByParent_CategoryId(parentId);
+    ids.addAll(
+        children.stream()
+            .map(Category::getCategoryId)
+            .toList()
+    );
+    return ids;
   }
 
   @Override
@@ -750,14 +806,54 @@ public class PostServiceImpl implements PostService {
       responseRate = Math.min((float) followerCount / postCount, 5f);
     }
 
-    List<PostDetailUser.PostSeller> postSellerList = postRepository
-        .findByUserUserId(author.getUserId())
-        .stream()
+    List<Post> authorPosts = postRepository.findByUserUserId(author.getUserId());
+    List<Long> authorPostIds = authorPosts.stream()
         .filter(p -> p.getPostId() != null)
-        .map(p -> PostDetailUser.PostSeller.builder()
-            .title(p.getTitle())
-            .price(p.getPrice() != null ? p.getPrice().toString() : null)
-            .build())
+        .map(Post::getPostId)
+        .toList();
+
+    Map<Long, Long> reactionCounts = postReactionRepository.countReactionsByPostIds(authorPostIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    Map<Long, Long> commentCounts = commentRepository.countCommentsByPostIds(authorPostIds)
+        .stream()
+        .collect(Collectors.toMap(
+            arr -> (Long) arr[0],
+            arr -> (Long) arr[1]
+        ));
+
+    java.text.NumberFormat currencyFormat = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+
+    List<PostDetailUser.PostSeller> postSellerList = authorPosts.stream()
+        .filter(p -> p.getPostId() != null)
+        .map(p -> {
+          String thumbnailUrl = null;
+          String mediaType = null;
+          if (p.getImages() != null && !p.getImages().isEmpty()) {
+            PostImage firstImage = p.getImages().get(0);
+            thumbnailUrl = buildPublicUrl(firstImage.getObjectKey());
+            mediaType = firstImage.getMediaType() != null ? firstImage.getMediaType().name() : "IMAGE";
+          }
+          String formattedPrice = p.getPrice() != null
+              ? currencyFormat.format(p.getPrice()).replace("₫", "").trim() + "₫"
+              : null;
+          String postedAt = formatRelativeTimeInternal(p.getCreatedAt());
+          return PostDetailUser.PostSeller.builder()
+              .postId(p.getPostId())
+              .title(p.getTitle())
+              .price(p.getPrice() != null ? p.getPrice().toString() : null)
+              .formattedPrice(formattedPrice)
+              .thumbnailUrl(thumbnailUrl)
+              .mediaType(mediaType)
+              .countReaction(reactionCounts.getOrDefault(p.getPostId(), 0L))
+              .countComment(commentCounts.getOrDefault(p.getPostId(), 0L))
+              .postedAt(postedAt)
+              .build();
+        })
         .toList();
 
     String avatarUrl = author.getAvatarUrl();
@@ -782,8 +878,21 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> hotPost() {
+  public List<PostResponse> hotPost(String keyword) {
     List<Post> approvedPosts = postRepository.findByStatusOrderByCreatedAtAsc(PostStatus.APPROVED);
+
+    if (approvedPosts.isEmpty()) {
+      return List.of();
+    }
+
+    // Filter by keyword if provided
+    if (keyword != null && !keyword.isBlank()) {
+      String lowerKeyword = keyword.trim().toLowerCase();
+      approvedPosts = approvedPosts.stream()
+          .filter(p -> p.getTitle().toLowerCase().contains(lowerKeyword) ||
+                       (p.getDescription() != null && p.getDescription().toLowerCase().contains(lowerKeyword)))
+          .toList();
+    }
 
     if (approvedPosts.isEmpty()) {
       return List.of();
@@ -823,12 +932,20 @@ public class PostServiceImpl implements PostService {
   }
 
   @Override
-  public List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status) {
+  public List<PostResponse> getMyPostsByStatus(Long userId, PostStatus status, String keyword) {
     List<Post> posts;
     if (status != null) {
-      posts = postRepository.findByUserUserIdAndStatus(userId, status);
+      if (keyword != null && !keyword.isBlank()) {
+        posts = postRepository.findByUserUserIdAndStatusAndTitleContainingIgnoreCase(userId, status, keyword.trim());
+      } else {
+        posts = postRepository.findByUserUserIdAndStatus(userId, status);
+      }
     } else {
-      posts = postRepository.findByUserUserId(userId);
+      if (keyword != null && !keyword.isBlank()) {
+        posts = postRepository.findByUserUserIdAndTitleContainingIgnoreCase(userId, keyword.trim());
+      } else {
+        posts = postRepository.findByUserUserId(userId);
+      }
     }
     return posts.stream()
         .map(post -> mapToResponse(post, userId))
@@ -878,5 +995,38 @@ public class PostServiceImpl implements PostService {
     post.setStatus(PostStatus.APPROVED);
     Post saved = postRepository.save(post);
     return mapToResponse(saved, userId);
+  }
+
+  @Override
+  public Page<PostResponse> getPendingPosts(String keyword, Pageable pageable) {
+    Specification<Post> spec = Specification.where(PostSpecifications.hasStatus(PostStatus.PENDING));
+
+    if (keyword != null && !keyword.isBlank()) {
+      Specification<Post> keywordSpec = Specification.where(
+          PostSpecifications.hasTitle(keyword)
+      ).or(PostSpecifications.hasDescription(keyword))
+       .or(PostSpecifications.hasAuthorFullName(keyword));
+      spec = spec.and(keywordSpec);
+    }
+
+    return postRepository.findAll(spec, pageable).map(this::mapToResponse);
+  }
+
+  private String formatRelativeTimeInternal(LocalDateTime dateTime) {
+    if (dateTime == null) {
+      return "Không rõ";
+    }
+    LocalDateTime now = LocalDateTime.now();
+    long minutes = java.time.Duration.between(dateTime, now).toMinutes();
+    long hours = java.time.Duration.between(dateTime, now).toHours();
+    long days = java.time.Duration.between(dateTime, now).toDays();
+
+    if (minutes < 1) return "Vừa xong";
+    if (minutes < 60) return minutes + " phút trước";
+    if (hours < 24) return hours + " giờ trước";
+    if (days < 7) return days + " ngày trước";
+    if (days < 30) return (days / 7) + " tuần trước";
+    if (days < 365) return (days / 30) + " tháng trước";
+    return (days / 365) + " năm trước";
   }
 }
