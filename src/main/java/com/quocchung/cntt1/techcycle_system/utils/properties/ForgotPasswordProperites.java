@@ -28,6 +28,6 @@ public class ForgotPasswordProperites {
   @Value("${forgot-password.forgot-password-rate-limit.ip-max-attempts:10}")
   private int forgotPasswordIpMaxAttempts;
 
-  @Value("${forgot-password.frontend-reset-password-url:http://localhost:5173/reset-password}")
+  @Value("${forgot-password.frontend-reset-password-url:http://62.171.174.204:3000/reset-password}")
   private String frontendResetPasswordUrl;
 }
