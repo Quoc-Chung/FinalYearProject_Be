@@ -29,22 +29,22 @@ public class UserReview {
   @JoinColumn(name = "to_user_id", nullable = false)
   private User toUser;
 
-
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "from_user_id", nullable = false)
   private User fromUser;
 
-
   @Column(nullable = false)
   private Integer rating;
-
 
   @Column(length = 1000)
   private String comment;
 
-
   @Column(length = 500)
   private String tags;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "transaction_id", nullable = true)
+  private Transaction transaction;
 
   @CreationTimestamp
   @Column(name = "created_at", updatable = false)

@@ -7,6 +7,7 @@ import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserReview;
+import com.quocchung.cntt1.techcycle_system.repository.TransactionRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
 import com.quocchung.cntt1.techcycle_system.service.UserReviewService;
@@ -24,10 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserReviewServiceImpl implements UserReviewService {
   private final UserReviewRepository userReviewRepository;
   private final UserRepository userRepository;
+  private final TransactionRepository transactionRepository;
 
-  // ============================================================
-  // ĐÁNH GIÁ NGƯỜI DÙNG
-  // ============================================================
   @Override
   @Transactional
   public ReviewResponse reviewUser(Long fromUserId, Long toUserId, ReviewRequest request) {
@@ -35,8 +34,17 @@ public class UserReviewServiceImpl implements UserReviewService {
       throw new ResException(ResErrorCode.BAD_REQUEST, "Không thể tự đánh giá bản thân");
     }
 
+    // Validate: only allow review if both users have completed transaction
+    if (!transactionRepository.existsCompletedTransactionBetweenUsers(fromUserId, toUserId)) {
+      throw new ResException(ResErrorCode.PERMISSION_DENIED,
+          "Chỉ có thể đánh giá người dùng khi đã có giao dịch hoàn tất với họ");
+    }
+
     User fromUser = getUserOrThrow(fromUserId);
     User toUser = getUserOrThrow(toUserId);
+
+    // Find the completed transaction between these two users
+    var transactionOpt = transactionRepository.findCompletedTransactionBetweenUsers(fromUserId, toUserId);
 
     Optional<UserReview> existingReview = userReviewRepository.findByFromUserAndToUser(fromUser, toUser);
 
@@ -44,9 +52,14 @@ public class UserReviewServiceImpl implements UserReviewService {
 
     if (existingReview.isPresent()) {
       review = existingReview.get();
-      review.setRating(request.getRating());
+      // update xong không được sửa
       review.setComment(request.getComment());
       review.setTags(request.getTags());
+      // Keep existing transaction if already set
+      if (review.getTransaction() == null && transactionOpt.isPresent()) {
+        review.setTransaction(transactionOpt.get());
+      }
+
     } else {
       review = UserReview.builder()
           .fromUser(fromUser)
@@ -54,14 +67,11 @@ public class UserReviewServiceImpl implements UserReviewService {
           .rating(request.getRating())
           .comment(request.getComment())
           .tags(request.getTags())
+          .transaction(transactionOpt.orElse(null))
           .build();
     }
-
     userReviewRepository.save(review);
-
-    // Cập nhật trustScore của toUser sau khi review
     recalculateTrustScore(toUser);
-
     return ReviewResponse.builder()
         .reviewId(review.getReviewId())
         .fromUser(toUserSummary(fromUser))
@@ -73,9 +83,6 @@ public class UserReviewServiceImpl implements UserReviewService {
         .build();
   }
 
-  // ============================================================
-  // DANH SÁCH REVIEW CỦA MỘT USER
-  // ============================================================
   @Override
   public Page<ReviewResponse> getReviews(Long userId, int page, int size) {
     getUserOrThrow(userId);
@@ -99,20 +106,25 @@ public class UserReviewServiceImpl implements UserReviewService {
         .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND,
             "Không tìm thấy người dùng với id: " + userId));
   }
+
+
   private void recalculateTrustScore(User user) {
     Double avgRating = userReviewRepository.getAverageRatingByUserId(user.getUserId());
     long totalReviews = userReviewRepository.countByToUserId(user.getUserId());
 
-    double score = 0;
-
-
-    if (avgRating != null) {
-      score += (avgRating / 5.0) * 8.0;
+    if (avgRating == null || totalReviews == 0) {
+      user.setTrustScore(0.0);
+      userRepository.save(user);
+      return;
     }
 
-    score += Math.min((totalReviews / 50.0) * 2.0, 2.0);
+    double C = 3.5;
+    double m = 10.0;
+    double bayesianAvg = (m * C + avgRating * totalReviews) / (m + totalReviews);
 
-    user.setTrustScore(score * 10);
+    // Scale về 0-100
+    double score = (bayesianAvg / 5.0) * 100.0;
+    user.setTrustScore(Math.round(score * 10.0) / 10.0); // làm tròn 1 chữ số thập phân
     userRepository.save(user);
   }
 
@@ -123,5 +135,10 @@ public class UserReviewServiceImpl implements UserReviewService {
         .avatarUrl(user.getAvatarUrl())
         .trustScore(user.getTrustScore())
         .build();
+  }
+
+  @Override
+  public boolean hasTransactionWithUser(Long userId1, Long userId2) {
+    return transactionRepository.existsCompletedTransactionBetweenUsers(userId1, userId2);
   }
 }

@@ -46,4 +46,23 @@ public class UserReviewController {
     return ResponseEntity.ok(
         responseUtils.successPage(result.getContent(), page, result.getTotalElements(), size));
   }
+
+  @GetMapping("/user/{userId}")
+  public ResponseEntity<APIResponse<ReviewResponse>> getUserReviews(
+      @PathVariable Long userId,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    Page<ReviewResponse> result = userReviewService.getReviews(userId, page, size);
+    return ResponseEntity.ok(
+        responseUtils.successPage(result.getContent(), page, result.getTotalElements(), size));
+  }
+
+  @GetMapping("/has-transaction/{userId}")
+  public ResponseEntity<APIResponse<Boolean>> hasTransactionWithUser(
+      @AuthenticationPrincipal UserPrincipal userPrincipal,
+      @PathVariable Long userId) {
+    boolean hasTransaction = userReviewService.hasTransactionWithUser(
+        userPrincipal.getUserId(), userId);
+    return ResponseEntity.ok(responseUtils.success(hasTransaction));
+  }
 }

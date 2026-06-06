@@ -78,6 +78,19 @@ public class NotificationServiceImpl implements NotificationService {
   }
 
   @Override
+  public void sendNotificationToAdminTopic(NotificationResponse notification) {
+    try {
+      String destination = "/topic/admin/notifications";
+      messagingTemplate.convertAndSend(destination, notification);
+      log.info("[NOTI] Sent notification to admin topic: type={}, title={}",
+          notification.getType(), notification.getTitle());
+    } catch (Exception e) {
+      log.error("[NOTI] Failed to send notification to admin topic: {}",
+          e.getMessage(), e);
+    }
+  }
+
+  @Override
   public Page<NotificationResponse> getNotifications(Long userId, Pageable pageable) {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));

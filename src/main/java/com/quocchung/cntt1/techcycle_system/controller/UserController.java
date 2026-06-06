@@ -107,6 +107,12 @@ public class UserController {
     return responseUtils.success(userMetadataResponse);
   }
 
+  @GetMapping("/metadata/{userId}")
+  public APIResponse<UserMetadataResponse> getUserMetadataById(@PathVariable Long userId) {
+    UserMetadataResponse userMetadataResponse = userService.getUserMetadata(userId);
+    return responseUtils.success(userMetadataResponse);
+  }
+
   @GetMapping("/seller/{userId}")
   public APIResponse<SellerProfileResponse> getSellerProfile(@PathVariable Long userId) {
     SellerProfileResponse sellerProfile = userService.getSellerProfile(userId);

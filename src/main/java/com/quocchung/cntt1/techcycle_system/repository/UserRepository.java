@@ -15,10 +15,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByEmail(String email);
   boolean existsByEmail(String email);
 
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Transactional
-  @Query("UPDATE User u SET u.isFirstLogin = false WHERE u.userId = :id AND u.isFirstLogin = true")
-  int markFirstLoginDone(@Param("id") Long id);
 
   @Query("SELECT DISTINCT u FROM User u WHERE u.userId IN " +
          "(SELECT ur.user.userId FROM UserRole ur WHERE ur.role.name = :roleName)")
@@ -47,4 +43,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
          countQuery = "SELECT COUNT(DISTINCT u.user_id) FROM users u WHERE u.deleted_at IS NULL AND u.status = 'ACTIVE'",
          nativeQuery = true)
   List<User> findTopSellersByPostCount(org.springframework.data.domain.Pageable pageable);
+
+  @Query("""
+        SELECT p.user
+        FROM Post p
+        WHERE p.postId = :postId
+    """)
+  Optional<User> getUserByPostId(@Param("postId") Long postId);
+
 }

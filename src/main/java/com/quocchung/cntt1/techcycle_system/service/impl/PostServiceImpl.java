@@ -111,6 +111,7 @@ public class PostServiceImpl implements PostService {
         .status(PostStatus.PENDING)
         .category(category)
         .brand(brand)
+        .createdAt(LocalDateTime.now())
         .address(address)
         .user(author)
         .build();
@@ -253,10 +254,8 @@ public class PostServiceImpl implements PostService {
           .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS));
       post.setAddress(address);
     }
-
+    post.setUpdatedAt(LocalDateTime.now());
     postRepository.save(post);
-
-
     post.getImages().clear();
     post.getAttributes().clear();
     post.getPostTags().clear();
