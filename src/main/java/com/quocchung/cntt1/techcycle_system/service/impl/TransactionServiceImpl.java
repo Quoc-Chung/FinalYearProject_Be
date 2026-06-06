@@ -115,7 +115,7 @@ public class TransactionServiceImpl implements TransactionService {
         "Giao dịch hoàn tất",
         "Giao dịch cho bài viết \"" + transaction.getPost().getTitle()
             + "\" đã hoàn tất. Bạn có 30 ngày để đánh giá đối tác.",
-        "/profile",
+        "/transactions",
         sellerData);
 
     Map<String, Object> buyerData = new LinkedHashMap<>();
@@ -130,7 +130,7 @@ public class TransactionServiceImpl implements TransactionService {
         "Giao dịch hoàn tất",
         "Giao dịch cho bài viết \"" + transaction.getPost().getTitle()
             + "\" đã hoàn tất. Bạn có 30 ngày để đánh giá đối tác.",
-        "/profile",
+        "/transactions",
         buyerData);
   }
 

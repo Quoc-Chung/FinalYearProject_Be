@@ -29,10 +29,10 @@ public class SellerProfileResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SellerStats {
-        private int exchanges;
-        private int posts;
-        private String responseRate;
-        private String responseTime;
+        private int posts;           // Số bài đăng
+        private int followers;       // Số người theo dõi
+        private String avgRating;    // Điểm đánh giá trung bình (VD: "4.8")
+        private int reviewCount;     // Số lượt đánh giá
     }
 
     @Data

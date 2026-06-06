@@ -12,6 +12,7 @@ import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import com.quocchung.cntt1.techcycle_system.utils.response.APIResponse;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Page;
@@ -154,9 +155,10 @@ public class PostController {
   @PreAuthorize("hasAnyRole( 'ADMIN')")
   public ResponseEntity<APIResponse<PostResponse>> rejectPost(
       @PathVariable Long id,
-      @RequestParam String reason,
+      @RequestBody Map<String, String> body,
       @AuthenticationPrincipal UserPrincipal userPrincipal
   ) {
+    String reason = body.get("reason");
     return ResponseEntity.ok(responseUtils.success(
         postService.rejectPost(id, reason, userPrincipal.getUserId())));
   }

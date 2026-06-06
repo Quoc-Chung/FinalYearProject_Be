@@ -329,13 +329,15 @@ public class UserServiceImpl implements UserService {
     String trustScore = (avgRating != null ? String.format("%.1f", avgRating) : "0.0")
         + " • " + (reviewCount > 0 ? reviewCount + " đánh giá" : "Chưa có đánh giá");
 
-    long exchangeCount = conversationRepository.countByParticipantUserId(userId);
     long postCount = postRepository.countByUserUserId(userId);
+    long followerCount = userFollowRepository.countFollowersByUserId(userId);
+    String avgRatingStr = avgRating != null ? String.format("%.1f", avgRating) : "0.0";
+
     SellerProfileResponse.SellerStats stats = SellerProfileResponse.SellerStats.builder()
-        .exchanges((int) exchangeCount)
         .posts((int) postCount)
-        .responseRate("98%")
-        .responseTime("< 10 phút")
+        .followers((int) followerCount)
+        .avgRating(avgRatingStr)
+        .reviewCount((int) reviewCount)
         .build();
 
     List<Post> activePosts = postRepository.findByUserUserIdAndStatus(userId, PostStatus.APPROVED);
