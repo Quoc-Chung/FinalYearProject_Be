@@ -99,7 +99,7 @@ services:
       mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
       mc mb --ignore-existing local/$$MINIO_BUCKET_NAME &&
       mc anonymous set download local/$$MINIO_BUCKET_NAME &&
-      mc cors set --allow-origin 'http://62.171.174.204:3000' --allow-method 'PUT,GET,HEAD,DELETE' --allow-header '*' local/$$MINIO_BUCKET_NAME &&
+      mc cors set --allow-origin 'http://localhost:5173' --allow-method 'PUT,GET,HEAD,DELETE' --allow-header '*' local/$$MINIO_BUCKET_NAME &&
       echo 'MinIO CORS configured' &&
       exit 0
       "

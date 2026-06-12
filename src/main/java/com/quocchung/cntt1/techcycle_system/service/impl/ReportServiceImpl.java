@@ -2,6 +2,7 @@ package com.quocchung.cntt1.techcycle_system.service.impl;
 
 import com.quocchung.cntt1.techcycle_system.config.MinioProperties;
 import com.quocchung.cntt1.techcycle_system.dtos.request.CreateReportRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Dashboard.CategoryStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.FullReportResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserPostDetailResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserReportStatsResponse;
@@ -9,10 +10,12 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.ReportResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Notification.NotificationResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
+import com.quocchung.cntt1.techcycle_system.model.Category;
 import com.quocchung.cntt1.techcycle_system.model.Post;
 import com.quocchung.cntt1.techcycle_system.model.PostImage;
 import com.quocchung.cntt1.techcycle_system.model.PostReport;
 import com.quocchung.cntt1.techcycle_system.model.User;
+import com.quocchung.cntt1.techcycle_system.repository.CategoryRepository;
 import com.quocchung.cntt1.techcycle_system.repository.CommentRepository;
 import com.quocchung.cntt1.techcycle_system.repository.DashboardRepository;
 import com.quocchung.cntt1.techcycle_system.repository.PostReactionRepository;
@@ -56,6 +59,7 @@ public class ReportServiceImpl implements ReportService {
   private final PostViewRepository postViewRepository;
   private final UserFollowRepository userFollowRepository;
   private final DashboardRepository dashboardRepository;
+  private final CategoryRepository categoryRepository;
   private final MinioProperties minioProperties;
   private final NotificationService notificationService;
 
@@ -458,5 +462,34 @@ public class ReportServiceImpl implements ReportService {
     }
     return postViewRepository.countViewsByPostIds(List.copyOf(postIds)).stream()
         .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+  }
+
+  @Override
+  public List<CategoryStatsResponse> getCategoryStats() {
+    List<Category> categories = categoryRepository.findAll();
+    long totalPosts = dashboardRepository.countTotalPosts();
+
+    List<CategoryStatsResponse> categoryStats = categories.stream()
+        .map(cat -> {
+          Long postCount = dashboardRepository.countPostsByCategory(cat.getCategoryId());
+          Long approvedCount = dashboardRepository.countApprovedPostsByCategory(cat.getCategoryId());
+          Long soldCount = dashboardRepository.countSoldPostsByCategory(cat.getCategoryId());
+          Long pendingCount = dashboardRepository.countPendingPostsByCategory(cat.getCategoryId());
+          double percentage = totalPosts > 0 ? (postCount * 100.0 / totalPosts) : 0;
+
+          return CategoryStatsResponse.builder()
+              .categoryId(cat.getCategoryId())
+              .categoryName(cat.getName())
+              .postCount(postCount)
+              .approvedCount(approvedCount)
+              .soldCount(soldCount)
+              .pendingCount(pendingCount)
+              .percentage(percentage)
+              .build();
+        })
+        .sorted((a, b) -> Long.compare(b.getPostCount(), a.getPostCount()))
+        .toList();
+
+    return categoryStats;
   }
 }

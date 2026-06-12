@@ -1,6 +1,7 @@
 package com.quocchung.cntt1.techcycle_system.controller;
 
 import com.quocchung.cntt1.techcycle_system.dtos.request.CreateReportRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Dashboard.CategoryStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.FullReportResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserPostDetailResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserReportStatsResponse;
@@ -127,5 +128,12 @@ public class ReportController {
   public ResponseEntity<APIResponse<List<UserPostDetailResponse>>> getUserPosts(@PathVariable Long userId) {
     List<UserPostDetailResponse> posts = reportService.getUserPosts(userId);
     return ResponseEntity.ok(responseUtils.success(posts));
+  }
+
+  @GetMapping("/categories")
+  @PreAuthorize("hasAnyRole('ADMIN')")
+  public ResponseEntity<APIResponse<List<CategoryStatsResponse>>> getCategoryStats() {
+    List<CategoryStatsResponse> stats = reportService.getCategoryStats();
+    return ResponseEntity.ok(responseUtils.success(stats));
   }
 }

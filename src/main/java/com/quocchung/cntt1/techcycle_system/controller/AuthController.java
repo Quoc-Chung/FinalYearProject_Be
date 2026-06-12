@@ -222,7 +222,7 @@ public ResponseEntity<Void> handleGoogleCallback(
     );
 
     String redirectUrl = String.format(
-        "http://62.171.174.204:3000/auth/callback?accessToken=%s&user=%s",
+        "http://localhost:5173/auth/callback?accessToken=%s&user=%s",
         accessToken, userJson
     );
 
@@ -233,7 +233,7 @@ public ResponseEntity<Void> handleGoogleCallback(
 
   } catch (JsonProcessingException e) {
     return ResponseEntity.status(HttpStatus.FOUND)
-        .header(HttpHeaders.LOCATION, "http://62.171.174.204:3000/sign-in?error=social_login_failed")
+        .header(HttpHeaders.LOCATION, "http://localhost:5173/sign-in?error=social_login_failed")
         .build();
   }
 }
@@ -265,7 +265,7 @@ public ResponseEntity<Void> handleGoogleCallback(
       );
 
       String redirectUrl = String.format(
-          "http://62.171.174.204:3000/auth/callback?accessToken=%s&user=%s",
+          "http://localhost:5173/auth/callback?accessToken=%s&user=%s",
           accessToken, userJson
       );
 
@@ -276,7 +276,7 @@ public ResponseEntity<Void> handleGoogleCallback(
 
     } catch (JsonProcessingException e) {
       return ResponseEntity.status(HttpStatus.FOUND)
-          .header(HttpHeaders.LOCATION, "http://62.171.174.204:3000/sign-in?error=social_login_failed")
+          .header(HttpHeaders.LOCATION, "http://localhost:5173/sign-in?error=social_login_failed")
           .build();
     }
   }

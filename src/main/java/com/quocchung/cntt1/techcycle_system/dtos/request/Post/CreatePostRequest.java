@@ -24,7 +24,6 @@ public class CreatePostRequest {
 
   private BigDecimal originalPrice;
 
-  @NotNull(message = "Danh mục không được để trống")
   private Long categoryId;
 
   private Long brandId;

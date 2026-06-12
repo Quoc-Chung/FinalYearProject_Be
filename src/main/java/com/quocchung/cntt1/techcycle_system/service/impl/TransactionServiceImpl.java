@@ -107,14 +107,17 @@ public class TransactionServiceImpl implements TransactionService {
     sellerData.put("transactionId", transaction.getTransactionId());
     sellerData.put("postId", transaction.getPost().getPostId());
     sellerData.put("postTitle", transaction.getPost().getTitle());
+    sellerData.put("buyerId", transaction.getBuyer().getUserId());
+    sellerData.put("buyerName", transaction.getBuyer().getFullName());
+    sellerData.put("buyerAvatarUrl", transaction.getBuyer().getAvatarUrl());
     sellerData.put("role", "SELLER");
+    sellerData.put("canReview", !Boolean.TRUE.equals(transaction.getSellerReviewed()));
     notificationService.createNotification(
         transaction.getSeller(),
         transaction.getBuyer(),
-        NotificationType.SYSTEM,
-        "Giao dịch hoàn tất",
-        "Giao dịch cho bài viết \"" + transaction.getPost().getTitle()
-            + "\" đã hoàn tất. Bạn có 30 ngày để đánh giá đối tác.",
+        NotificationType.TRANSACTION_COMPLETED,
+        "Bạn đã bán thành công!",
+        "Bài viết \"" + transaction.getPost().getTitle() + "\" đã được đánh dấu bán cho " + transaction.getBuyer().getFullName() + ". Hãy đánh giá người mua để cải thiện cộng đồng!",
         "/transactions",
         sellerData);
 
@@ -122,14 +125,17 @@ public class TransactionServiceImpl implements TransactionService {
     buyerData.put("transactionId", transaction.getTransactionId());
     buyerData.put("postId", transaction.getPost().getPostId());
     buyerData.put("postTitle", transaction.getPost().getTitle());
+    buyerData.put("sellerId", transaction.getSeller().getUserId());
+    buyerData.put("sellerName", transaction.getSeller().getFullName());
+    buyerData.put("sellerAvatarUrl", transaction.getSeller().getAvatarUrl());
     buyerData.put("role", "BUYER");
+    buyerData.put("canReview", !Boolean.TRUE.equals(transaction.getBuyerReviewed()));
     notificationService.createNotification(
         transaction.getBuyer(),
         transaction.getSeller(),
-        NotificationType.SYSTEM,
-        "Giao dịch hoàn tất",
-        "Giao dịch cho bài viết \"" + transaction.getPost().getTitle()
-            + "\" đã hoàn tất. Bạn có 30 ngày để đánh giá đối tác.",
+        NotificationType.TRANSACTION_COMPLETED,
+        "Mua hàng thành công!",
+        "Bạn đã mua bài viết \"" + transaction.getPost().getTitle() + "\" từ " + transaction.getSeller().getFullName() + ". Hãy đánh giá người bán để hoàn tất giao dịch!",
         "/transactions",
         buyerData);
   }

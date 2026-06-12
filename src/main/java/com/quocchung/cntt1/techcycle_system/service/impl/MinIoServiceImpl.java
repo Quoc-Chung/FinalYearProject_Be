@@ -55,8 +55,7 @@ public class MinIoServiceImpl implements MinIoService {
   @Value("${minio.post-video-max-size-bytes:104857600}")
   private long postVideoMaxSizeBytes;
 
-         // upload/delete (internal)
-  private final MinioClient publicMinioClient;    // presigned URL (external)
+  private final MinioClient publicMinioClient;
 
   public MinIoServiceImpl(
       MinioClient minioClient,
@@ -67,9 +66,6 @@ public class MinIoServiceImpl implements MinIoService {
     this.publicMinioClient = publicMinioClient;
     this.minioProperties = minioProperties;
   }
-
-
-
   @PostConstruct
   public void initBucket() {
     try {

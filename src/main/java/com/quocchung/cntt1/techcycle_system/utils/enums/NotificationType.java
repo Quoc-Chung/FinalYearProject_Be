@@ -20,5 +20,6 @@ public enum NotificationType {
   POST_REPORT, // Báo cáo bài viết vi phạm
   USER_REPORT, // Báo cáo người dùng vi phạm
   ABUSE_DETECTED, // Phát hiện nội dung bất thường (AI)
-  SYSTEM // Thông báo hệ thống
+  SYSTEM, // Thông báo hệ thống
+  TRANSACTION_COMPLETED // Giao dịch hoàn tất - click để đánh giá người bán/người mua
 }

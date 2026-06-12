@@ -87,8 +87,11 @@ public class PostServiceImpl implements PostService {
     User author = userRepository.findById(userId)
         .orElseThrow(() -> new ResException(ResErrorCode.USER_NOT_FOUND));
 
-    Category category = categoryRepository.findById(request.getCategoryId())
-        .orElseThrow(() -> new ResException(ResErrorCode.CATEGORY_NOT_FOUND));
+    Category category = null;
+    if (request.getCategoryId() != null) {
+      category = categoryRepository.findById(request.getCategoryId())
+          .orElseThrow(() -> new ResException(ResErrorCode.CATEGORY_NOT_FOUND));
+    }
 
     Brand brand = null;
     if (request.getBrandId() != null) {

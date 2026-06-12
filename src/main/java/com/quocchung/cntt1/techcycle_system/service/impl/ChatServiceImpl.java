@@ -196,33 +196,42 @@ public class ChatServiceImpl implements ChatService {
 
     sendChatNotification(conversation, sender, message);
 
-    // Gửi thông báo cho admin khi có tin nhắn mới (nếu sender không phải admin)
     boolean isAdminSender = userRepository.hasRole(sender.getUserId(), "ADMIN");
     if (!isAdminSender) {
-      List<User> admins = userRepository.getAllAdmin();
-      for (User admin : admins) {
-        String title = "Tin nhắn mới từ người dùng";
-        String content = sender.getFullName() + ": " +
-            (message.getContent() != null && !message.getContent().isBlank()
-                ? (message.getContent().length() > 50
-                    ? message.getContent().substring(0, 50) + "..."
-                    : message.getContent())
-                : "Đã gửi tệp đính kèm");
-        String targetUrl = "/admin/messages/" + conversationId;
-        java.util.Map<String, Object> notiData = new java.util.HashMap<>();
-        notiData.put("conversationId", conversationId);
-        notiData.put("senderId", sender.getUserId());
-        notiData.put("senderName", sender.getFullName());
+      // Lấy tất cả participants của cuộc hội thoại
+      List<ConversationParticipant> participants = participantRepository
+          .findByConversationIdWithUser(conversationId);
 
-        notificationService.createNotification(
-            admin,
-            sender,
-            NotificationType.CHAT_MESSAGE,
-            title,
-            content,
-            targetUrl,
-            notiData
-        );
+      boolean hasAdminParticipant = participants.stream()
+          .filter(p -> !p.getUser().getUserId().equals(sender.getUserId()))
+          .anyMatch(p -> userRepository.hasRole(p.getUser().getUserId(), "ADMIN"));
+
+      if (hasAdminParticipant) {
+        List<User> admins = userRepository.getAllAdmin();
+        for (User admin : admins) {
+          String title = "Tin nhắn mới từ người dùng";
+          String content = sender.getFullName() + ": " +
+              (message.getContent() != null && !message.getContent().isBlank()
+                  ? (message.getContent().length() > 50
+                      ? message.getContent().substring(0, 50) + "..."
+                      : message.getContent())
+                  : "Đã gửi tệp đính kèm");
+          String targetUrl = "/admin/messages/" + conversationId;
+          java.util.Map<String, Object> notiData = new java.util.HashMap<>();
+          notiData.put("conversationId", conversationId);
+          notiData.put("senderId", sender.getUserId());
+          notiData.put("senderName", sender.getFullName());
+
+          notificationService.createNotification(
+              admin,
+              sender,
+              NotificationType.CHAT_MESSAGE,
+              title,
+              content,
+              targetUrl,
+              notiData
+          );
+        }
       }
     }
 

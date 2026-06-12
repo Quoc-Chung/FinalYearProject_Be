@@ -33,8 +33,6 @@ public class UserReviewServiceImpl implements UserReviewService {
     if (fromUserId.equals(toUserId)) {
       throw new ResException(ResErrorCode.BAD_REQUEST, "Không thể tự đánh giá bản thân");
     }
-
-    // Validate: only allow review if both users have completed transaction
     if (!transactionRepository.existsCompletedTransactionBetweenUsers(fromUserId, toUserId)) {
       throw new ResException(ResErrorCode.PERMISSION_DENIED,
           "Chỉ có thể đánh giá người dùng khi đã có giao dịch hoàn tất với họ");
@@ -42,8 +40,6 @@ public class UserReviewServiceImpl implements UserReviewService {
 
     User fromUser = getUserOrThrow(fromUserId);
     User toUser = getUserOrThrow(toUserId);
-
-    // Find the completed transaction between these two users
     var transactionOpt = transactionRepository.findCompletedTransactionBetweenUsers(fromUserId, toUserId);
 
     Optional<UserReview> existingReview = userReviewRepository.findByFromUserAndToUser(fromUser, toUser);
@@ -52,10 +48,8 @@ public class UserReviewServiceImpl implements UserReviewService {
 
     if (existingReview.isPresent()) {
       review = existingReview.get();
-      // update xong không được sửa
       review.setComment(request.getComment());
       review.setTags(request.getTags());
-      // Keep existing transaction if already set
       if (review.getTransaction() == null && transactionOpt.isPresent()) {
         review.setTransaction(transactionOpt.get());
       }
@@ -117,14 +111,11 @@ public class UserReviewServiceImpl implements UserReviewService {
       userRepository.save(user);
       return;
     }
-
     double C = 3.5;
     double m = 10.0;
     double bayesianAvg = (m * C + avgRating * totalReviews) / (m + totalReviews);
-
-    // Scale về 0-100
     double score = (bayesianAvg / 5.0) * 100.0;
-    user.setTrustScore(Math.round(score * 10.0) / 10.0); // làm tròn 1 chữ số thập phân
+    user.setTrustScore(Math.round(score * 10.0) / 10.0);
     userRepository.save(user);
   }
 

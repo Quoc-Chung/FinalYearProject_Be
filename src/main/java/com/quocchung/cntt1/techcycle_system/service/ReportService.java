@@ -1,6 +1,7 @@
 package com.quocchung.cntt1.techcycle_system.service;
 
 import com.quocchung.cntt1.techcycle_system.dtos.request.CreateReportRequest;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Dashboard.CategoryStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.FullReportResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserPostDetailResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Report.UserReportStatsResponse;
@@ -30,4 +31,6 @@ public interface ReportService {
   List<UserPostDetailResponse> getUserPosts(Long userId);
 
   UserReportStatsResponse getUserStats(Long userId);
+
+  List<CategoryStatsResponse> getCategoryStats();
 }
