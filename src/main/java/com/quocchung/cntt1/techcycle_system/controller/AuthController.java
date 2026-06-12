@@ -80,7 +80,6 @@ public class AuthController {
         .body(responseUtils.success(data));
   }
 
-
   @PostMapping("/login")
   public ResponseEntity<APIResponse<AuthTokenResponse>> login(
       @Valid @RequestBody LoginRequest loginRequest,

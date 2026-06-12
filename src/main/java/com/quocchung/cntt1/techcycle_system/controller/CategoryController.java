@@ -3,6 +3,7 @@ package com.quocchung.cntt1.techcycle_system.controller;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Category.CreateCategoryRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryTreeResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Dashboard.CategoryStatsResponse;
 import com.quocchung.cntt1.techcycle_system.service.CategoryService;
 import com.quocchung.cntt1.techcycle_system.utils.PageResponseUtil;
 import com.quocchung.cntt1.techcycle_system.utils.ResponseUtils;
@@ -43,7 +44,6 @@ public class CategoryController {
     PageResponse pageInfo = PageResponseUtil.extractPageMetadata(categoryPage);
     return ResponseEntity.ok(responseUtils.successPage(categoryPage.getContent(), pageInfo));
   }
-  
 
   @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<APIResponse<CategoryResponse>> create(
@@ -53,7 +53,6 @@ public class CategoryController {
     CategoryResponse response = categoryService.create(request, logo);
     return ResponseEntity.ok(responseUtils.success(response));
   }
-
 
   @PutMapping(value = "/edit/{categoryId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<APIResponse<CategoryResponse>> update(
@@ -86,5 +85,10 @@ public class CategoryController {
   @GetMapping("/root/active")
   public ResponseEntity<APIResponse<CategoryResponse>> getRootCategoriesActive() {
     return ResponseEntity.ok(responseUtils.successList(categoryService.getRootCategoriesActive()));
+  }
+
+  @GetMapping("/post-stats")
+  public ResponseEntity<APIResponse<CategoryStatsResponse>> getCategoryPostStats() {
+    return ResponseEntity.ok(responseUtils.successList(categoryService.getCategoryPostStats()));
   }
 }

@@ -3,12 +3,14 @@ package com.quocchung.cntt1.techcycle_system.service.impl;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Category.CreateCategoryRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryTreeResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Dashboard.CategoryStatsResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Minio.StorageUploadResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.mapper.CategoryMapper;
 import com.quocchung.cntt1.techcycle_system.model.Category;
 import com.quocchung.cntt1.techcycle_system.repository.CategoryRepository;
+import com.quocchung.cntt1.techcycle_system.repository.DashboardRepository;
 import com.quocchung.cntt1.techcycle_system.service.CategoryService;
 import com.quocchung.cntt1.techcycle_system.service.MinIoService;
 import java.util.ArrayList;
@@ -29,6 +31,7 @@ public class CategoryServiceImpl implements CategoryService {
   private final CategoryRepository categoryRepository;
   private final MinIoService minIoService;
   private final CategoryMapper categoryMapper;
+  private final DashboardRepository dashboardRepository;
 
   @Override
   @Transactional
@@ -76,16 +79,6 @@ public class CategoryServiceImpl implements CategoryService {
         .orElseThrow(() -> new ResException(ResErrorCode.ENTITY_NOT_EXISTS, "Category not found"));
     categoryRepository.delete(category);
   }
-
-  @Override
-  public List<CategoryResponse> getAllData(String searchText) {
-    Sort sort = Sort.by(Sort.Direction.DESC, "categoryId");
-    List<Category> categories = (searchText == null || searchText.isBlank())
-        ? categoryRepository.findAll(sort)
-        : categoryRepository.findByNameContainingIgnoreCase(searchText.trim(), sort);
-    return categories.stream().map(this::mapResponse).toList();
-  }
-
   @Override
   public Page<CategoryResponse> getAllData(String searchText, Pageable pageable) {
     Page<Category> categoryPage = categoryRepository.findBySearchText(searchText, pageable);
@@ -113,7 +106,6 @@ public class CategoryServiceImpl implements CategoryService {
 
   @Override
   public List<CategoryTreeResponse> getAllTreeData(String searchText) {
-    // Query flat list từ DB
     List<CategoryTreeResponse> flatList = categoryMapper.getAllCategories(
         (searchText == null || searchText.isBlank()) ? null : searchText.trim()
     );
@@ -132,6 +124,45 @@ public class CategoryServiceImpl implements CategoryService {
     Sort sort = Sort.by(Sort.Direction.ASC, "name");
     List<Category> categories = categoryRepository.findByParentIsNullAndIsActiveTrue(sort);
     return categories.stream().map(this::mapResponse).toList();
+  }
+
+  @Override
+  public List<CategoryStatsResponse> getCategoryPostStats() {
+    Sort sort = Sort.by(Sort.Direction.ASC, "name");
+    List<Category> categories = categoryRepository.findAll(sort);
+
+    List<CategoryStatsResponse> categoryStats = categories.stream()
+        .map(cat -> {
+          Long postCount = dashboardRepository.countPostsByCategory(cat.getCategoryId());
+          Long approvedCount = dashboardRepository.countApprovedPostsByCategory(cat.getCategoryId());
+          Long soldCount = dashboardRepository.countSoldPostsByCategory(cat.getCategoryId());
+          Long pendingCount = dashboardRepository.countPendingPostsByCategory(cat.getCategoryId());
+          return CategoryStatsResponse.builder()
+              .categoryId(cat.getCategoryId())
+              .categoryName(cat.getName())
+              .postCount(postCount)
+              .approvedCount(approvedCount)
+              .soldCount(soldCount)
+              .pendingCount(pendingCount)
+              .build();
+        })
+        .toList();
+
+    long totalPosts = categoryStats.stream()
+        .mapToLong(CategoryStatsResponse::getPostCount)
+        .sum();
+
+    if (totalPosts > 0) {
+      categoryStats = categoryStats.stream()
+          .map(stat -> {
+            Double percentage = (stat.getPostCount() * 100.0) / totalPosts;
+            stat.setPercentage(Math.round(percentage * 100.0) / 100.0);
+            return stat;
+          })
+          .toList();
+    }
+
+    return categoryStats;
   }
   private List<CategoryTreeResponse> buildTree(List<CategoryTreeResponse> flatList) {
     // Map theo categoryId để lookup nhanh

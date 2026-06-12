@@ -1,4 +1,4 @@
-package com.quocchung.cntt1.techcycle_system.dto.request;
+package com.quocchung.cntt1.techcycle_system.dtos.request.User;
 
 import jakarta.validation.constraints.Size;
 import lombok.*;

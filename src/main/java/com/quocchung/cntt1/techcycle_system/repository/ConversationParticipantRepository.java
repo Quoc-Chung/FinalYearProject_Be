@@ -18,19 +18,6 @@ public interface ConversationParticipantRepository extends JpaRepository<Convers
          "JOIN FETCH cp.user " +
          "WHERE cp.conversation.conversationId = :conversationId")
   List<ConversationParticipant> findByConversationIdWithUser(@Param("conversationId") Long conversationId);
-
-  @Query("SELECT cp FROM ConversationParticipant cp " +
-         "WHERE cp.conversation.conversationId = :conversationId " +
-         "AND cp.user.userId = :userId")
-  Optional<ConversationParticipant> findByConversationIdAndUserId(
-      @Param("conversationId") Long conversationId,
-      @Param("userId") Long userId
-  );
-
-  @Query("SELECT cp FROM ConversationParticipant cp " +
-         "WHERE cp.user.userId = :userId")
-  List<ConversationParticipant> findByUserId(@Param("userId") Long userId);
-
   @Modifying
   @Query("UPDATE ConversationParticipant cp " +
          "SET cp.lastReadAt = :lastReadAt " +

@@ -3,6 +3,7 @@ package com.quocchung.cntt1.techcycle_system.service;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Category.CreateCategoryRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Category.CategoryTreeResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.Dashboard.CategoryStatsResponse;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,8 +16,6 @@ public interface CategoryService {
 
   void delete(Long categoryId);
 
-  List<CategoryResponse> getAllData(String searchText);
-
   Page<CategoryResponse> getAllData(String searchText, Pageable pageable);
 
   List<CategoryTreeResponse> getAllTreeData(String searchText);
@@ -24,4 +23,6 @@ public interface CategoryService {
   List<CategoryResponse> getRootCategories();
 
   List<CategoryResponse> getRootCategoriesActive();
+
+  List<CategoryStatsResponse> getCategoryPostStats();
 }

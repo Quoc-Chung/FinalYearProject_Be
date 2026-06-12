@@ -17,8 +17,4 @@ public interface NotificationPreferenceRepository extends JpaRepository<Notifica
     List<NotificationPreference> findByUserUserId(Long userId);
 
     Optional<NotificationPreference> findByUserUserIdAndNotificationType(Long userId, NotificationType notificationType);
-
-    @Modifying
-    @Query("DELETE FROM NotificationPreference np WHERE np.user.userId = :userId")
-    void deleteAllByUserId(@Param("userId") Long userId);
 }

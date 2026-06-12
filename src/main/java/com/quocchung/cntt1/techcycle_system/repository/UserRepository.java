@@ -43,12 +43,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
          countQuery = "SELECT COUNT(DISTINCT u.user_id) FROM users u WHERE u.deleted_at IS NULL AND u.status = 'ACTIVE'",
          nativeQuery = true)
   List<User> findTopSellersByPostCount(org.springframework.data.domain.Pageable pageable);
-
-  @Query("""
-        SELECT p.user
-        FROM Post p
-        WHERE p.postId = :postId
-    """)
-  Optional<User> getUserByPostId(@Param("postId") Long postId);
-
 }

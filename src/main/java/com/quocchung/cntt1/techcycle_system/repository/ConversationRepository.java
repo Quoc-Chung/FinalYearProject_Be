@@ -69,28 +69,6 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
       @Param("userId2") Long userId2,
       @Param("size") int size
   );
-
-  /**
-   * Tìm tất cả cuộc trò chuyện của một người dùng.
-   */
-  @Query("SELECT DISTINCT c FROM Conversation c " +
-         "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
-         "WHERE cp.user.userId = :userId")
-  List<Conversation> findAllByParticipantUserId(@Param("userId") Long userId);
-
-  /**
-   * Tìm cuộc trò chuyện theo danh sách ID kèm thông tin người tạo.
-   */
-  @Query("SELECT c FROM Conversation c " +
-         "LEFT JOIN FETCH c.createdBy " +
-         "WHERE c.conversationId IN :ids")
-  List<Conversation> findAllByIdsWithDetails(@Param("ids") List<Long> ids);
-
-  @Query("SELECT COUNT(DISTINCT c) FROM Conversation c " +
-         "INNER JOIN ConversationParticipant cp ON cp.conversation = c " +
-         "WHERE cp.user.userId = :userId")
-  long countByParticipantUserId(@Param("userId") Long userId);
-
   /**
    * Lấy tất cả cuộc trò chuyện cho admin, sắp xếp theo thời gian tin nhắn cuối.
    * Chỉ lấy các cuộc trò chuyện giữa user và admin.
@@ -117,14 +95,4 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
          "ORDER BY c.lastMessageAt DESC NULLS LAST")
   Page<Conversation> findConversationsByAdminId(@Param("adminId") Long adminId, Pageable pageable);
 
-  /**
-   * Đếm số cuộc trò chuyện có tin nhắn chưa đọc cho admin.
-   */
-  @Query("SELECT COUNT(DISTINCT m.conversation.conversationId) FROM Message m " +
-         "WHERE m.isRead = false " +
-         "AND m.sender.userId != :adminId " +
-         "AND EXISTS (SELECT cp FROM ConversationParticipant cp " +
-         "            WHERE cp.conversation = m.conversation " +
-         "            AND cp.user.userId = :adminId)")
-  long countUnreadConversationsForAdmin(@Param("adminId") Long adminId);
 }

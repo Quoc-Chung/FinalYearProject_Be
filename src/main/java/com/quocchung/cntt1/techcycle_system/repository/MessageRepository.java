@@ -34,17 +34,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
          "LIMIT 1")
   Optional<Message> findLastMessageByConversationId(@Param("conversationId") Long conversationId);
 
-  @Query("SELECT m FROM Message m " +
-         "WHERE m.conversation.conversationId = :conversationId " +
-         "AND m.sender.userId = :senderId " +
-         "AND m.deletedAt IS NULL " +
-         "ORDER BY m.createdAt DESC " +
-         "LIMIT 1")
-  Optional<Message> findLastMessageByConversationAndSender(
-      @Param("conversationId") Long conversationId,
-      @Param("senderId") Long senderId
-  );
-
   @Query("SELECT COUNT(m) FROM Message m " +
          "WHERE m.conversation.conversationId = :conversationId " +
          "AND m.isRead = false " +
@@ -54,7 +43,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
       @Param("conversationId") Long conversationId,
       @Param("userId") Long userId
   );
-
   @Modifying
   @Query("UPDATE Message m " +
          "SET m.isRead = true " +
@@ -66,16 +54,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
       @Param("conversationId") Long conversationId,
       @Param("userId") Long userId
   );
-
-  @Query("SELECT m FROM Message m " +
-         "WHERE m.conversation.conversationId = :conversationId " +
-         "AND m.createdAt > :since " +
-         "AND m.deletedAt IS NULL")
-  List<Message> findMessagesSince(
-      @Param("conversationId") Long conversationId,
-      @Param("since") LocalDateTime since
-  );
-
   @Query("SELECT COUNT(m) FROM Message m " +
          "WHERE m.isRead = false " +
          "AND m.deletedAt IS NULL")

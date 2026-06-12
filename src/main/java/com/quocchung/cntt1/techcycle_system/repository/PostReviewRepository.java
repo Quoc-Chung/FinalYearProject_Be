@@ -17,16 +17,11 @@ public interface PostReviewRepository extends JpaRepository<PostReview, Long> {
 
     Page<PostReview> findByUserUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
-    Optional<PostReview> findByPostPostIdAndUserUserId(Long postId, Long userId);
-
     @Query("SELECT AVG(pr.rating) FROM PostReview pr WHERE pr.post.postId = :postId")
     Double getAverageRatingByPostId(@Param("postId") Long postId);
 
     @Query("SELECT COUNT(pr) FROM PostReview pr WHERE pr.post.postId = :postId")
     long countByPostId(@Param("postId") Long postId);
-
-    @Query("SELECT COUNT(pr) FROM PostReview pr WHERE pr.user.userId = :userId")
-    long countByUserId(@Param("userId") Long userId);
 
     boolean existsByPostPostIdAndUserUserId(Long postId, Long userId);
 }

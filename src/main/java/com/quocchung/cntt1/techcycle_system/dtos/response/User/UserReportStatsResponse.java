@@ -1,4 +1,4 @@
-package com.quocchung.cntt1.techcycle_system.dto.response;
+package com.quocchung.cntt1.techcycle_system.dtos.response.User;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
