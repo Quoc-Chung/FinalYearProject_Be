@@ -23,7 +23,7 @@ public class MinioConfig {
   @ConditionalOnProperty(prefix = "minio", name = "enabled", havingValue = "true", matchIfMissing = true)
   public MinioClient publicMinioClient(MinioProperties minioProperties) {
     return MinioClient.builder()
-        .endpoint(minioProperties.getEndpoint()) // ← đổi sang internal endpoint
+        .endpoint(minioProperties.getPublicEndpoint())
         .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
         .build();
   }
