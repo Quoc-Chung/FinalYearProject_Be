@@ -222,7 +222,7 @@ public ResponseEntity<Void> handleGoogleCallback(
     );
 
     String redirectUrl = String.format(
-        "http://localhost:5173/auth/callback?accessToken=%s&user=%s",
+        "https://techcycleit.duckdns.org/auth/callback?accessToken=%s&user=%s",
         accessToken, userJson
     );
 
@@ -233,7 +233,7 @@ public ResponseEntity<Void> handleGoogleCallback(
 
   } catch (JsonProcessingException e) {
     return ResponseEntity.status(HttpStatus.FOUND)
-        .header(HttpHeaders.LOCATION, "http://localhost:5173/sign-in?error=social_login_failed")
+        .header(HttpHeaders.LOCATION, "https://techcycleit.duckdns.org/sign-in?error=social_login_failed")
         .build();
   }
 }
@@ -265,7 +265,7 @@ public ResponseEntity<Void> handleGoogleCallback(
       );
 
       String redirectUrl = String.format(
-          "http://localhost:5173/auth/callback?accessToken=%s&user=%s",
+          "https://techcycleit.duckdns.org/auth/callback?accessToken=%s&user=%s",
           accessToken, userJson
       );
 
@@ -276,7 +276,7 @@ public ResponseEntity<Void> handleGoogleCallback(
 
     } catch (JsonProcessingException e) {
       return ResponseEntity.status(HttpStatus.FOUND)
-          .header(HttpHeaders.LOCATION, "http://localhost:5173/sign-in?error=social_login_failed")
+          .header(HttpHeaders.LOCATION, "https://techcycleit.duckdns.org/sign-in?error=social_login_failed")
           .build();
     }
   }

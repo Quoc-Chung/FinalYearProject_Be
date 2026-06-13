@@ -28,6 +28,6 @@ public class ForgotPasswordProperites {
   @Value("${forgot-password.forgot-password-rate-limit.ip-max-attempts:10}")
   private int forgotPasswordIpMaxAttempts;
 
-  @Value("${forgot-password.frontend-reset-password-url:http://localhost:5173/reset-password}")
+  @Value("${forgot-password.frontend-reset-password-url:https://techcycleit.duckdns.org/reset-password}")
   private String frontendResetPasswordUrl;
 }

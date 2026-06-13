@@ -64,7 +64,7 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
 
@@ -84,8 +84,8 @@ jwt:
 
 auth:
   refresh-cookie-name: refreshToken
-  refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:false}
-  refresh-cookie-same-site: Strict
+  refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+  refresh-cookie-same-site: Lax
   refresh-cookie-path: /
 
 forgot-password:
@@ -94,12 +94,12 @@ forgot-password:
     window-seconds: 900
     email-max-attempts: 3
     ip-max-attempts: 10
-  frontend-reset-password-url: ${FRONTEND_RESET_PASSWORD_URL:http://localhost:5173/reset-password}
+  frontend-reset-password-url: ${FRONTEND_RESET_PASSWORD_URL:https://techcycleit.duckdns.org/reset-password}
 
 minio:
   enabled: ${MINIO_ENABLED:true}
   endpoint: ${MINIO_ENDPOINT:http://minio:9000}
-  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://62.171.174.204:9000}
+  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:https://techcycleit.duckdns.org/minio}
   access-key: ${MINIO_ACCESS_KEY}
   secret-key: ${MINIO_SECRET_KEY}
   bucket-name: ${MINIO_BUCKET_NAME:techcycle}
@@ -123,4 +123,4 @@ logging:
           hikari: ERROR
 
 frontend:
-  url: ${FRONTEND_URL:http://localhost:5173}
+  url: ${FRONTEND_URL:https://techcycleit.duckdns.org}

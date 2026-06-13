@@ -28,7 +28,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       # MinIO
       - MINIO_ENDPOINT=http://minio:9000          # internal: để backend upload/delete
-      - MINIO_PUBLIC_ENDPOINT=http://62.171.174.204:9000
+      - MINIO_PUBLIC_ENDPOINT=https://techcycleit.duckdns.org/minio
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
@@ -99,7 +99,7 @@ services:
       mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
       mc mb --ignore-existing local/$$MINIO_BUCKET_NAME &&
       mc anonymous set download local/$$MINIO_BUCKET_NAME &&
-      mc cors set --allow-origin 'http://localhost:5173' --allow-method 'PUT,GET,HEAD,DELETE' --allow-header '*' local/$$MINIO_BUCKET_NAME &&
+      mc cors set --allow-origin 'https://techcycleit.duckdns.org' --allow-method 'PUT,GET,HEAD,DELETE' --allow-header '*' local/$$MINIO_BUCKET_NAME &&
       echo 'MinIO CORS configured' &&
       exit 0
       "
@@ -112,7 +112,7 @@ services:
       - "3000:80"
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
     networks:
       - techcycle-net
 

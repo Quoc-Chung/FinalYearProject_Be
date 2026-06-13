@@ -16,7 +16,7 @@ public class MinioUtils {
   public static String buildPublicUrl(String objectKey) {
     String base = publicEndpoint;
     if (base == null || base.isBlank()) {
-      base = "http://62.171.174.204:9000";
+      base = "https://techcycleit.duckdns.org/minio";
     }
     return base + "/" + objectKey;
   }

@@ -23,7 +23,7 @@ public class MinioConfig {
   @ConditionalOnProperty(prefix = "minio", name = "enabled", havingValue = "true", matchIfMissing = true)
   public MinioClient publicMinioClient(MinioProperties minioProperties) {
     return MinioClient.builder()
-        .endpoint(minioProperties.getPublicEndpoint()) // http://62.171.174.204:9000
+        .endpoint(minioProperties.getPublicEndpoint()) // https://techcycleit.duckdns.org/minio
         .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
         .build();
   }
