@@ -14,7 +14,7 @@ public class MinioConfig {
   @ConditionalOnProperty(prefix = "minio", name = "enabled", havingValue = "true", matchIfMissing = true)
   public MinioClient minioClient(MinioProperties minioProperties) {
     return MinioClient.builder()
-        .endpoint(minioProperties.getEndpoint())       // http://minio:9000
+        .endpoint(minioProperties.getEndpoint())
         .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
         .build();
   }
@@ -23,7 +23,7 @@ public class MinioConfig {
   @ConditionalOnProperty(prefix = "minio", name = "enabled", havingValue = "true", matchIfMissing = true)
   public MinioClient publicMinioClient(MinioProperties minioProperties) {
     return MinioClient.builder()
-        .endpoint(minioProperties.getPublicEndpoint()) // https://techcycleit.duckdns.org/minio
+        .endpoint(minioProperties.getEndpoint()) // ← đổi sang internal endpoint
         .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
         .build();
   }
