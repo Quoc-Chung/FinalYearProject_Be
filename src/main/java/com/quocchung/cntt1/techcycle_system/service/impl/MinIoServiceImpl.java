@@ -277,7 +277,6 @@ public class MinIoServiceImpl implements MinIoService {
     }
 
     try {
-
       String presignedUrl = minioClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
               .bucket(minioProperties.getBucketName())
@@ -287,13 +286,6 @@ public class MinIoServiceImpl implements MinIoService {
               .extraHeaders(Map.of("Content-Type", mimeType))
               .build()
       );
-
-
-      String internalEndpoint = minioProperties.getEndpoint();
-      String publicEndpoint = minioProperties.getPublicEndpoint();
-      if (publicEndpoint != null && !publicEndpoint.isBlank()) {
-        presignedUrl = presignedUrl.replace(internalEndpoint, publicEndpoint);
-      }
       return PresignedUrlResponse.builder()
           .presignedUrl(presignedUrl)
           .objectKey(objectKey)
