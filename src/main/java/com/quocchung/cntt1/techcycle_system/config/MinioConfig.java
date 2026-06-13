@@ -18,13 +18,4 @@ public class MinioConfig {
         .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
         .build();
   }
-
-  @Bean("publicMinioClient")
-  @ConditionalOnProperty(prefix = "minio", name = "enabled", havingValue = "true", matchIfMissing = true)
-  public MinioClient publicMinioClient(MinioProperties minioProperties) {
-    return MinioClient.builder()
-        .endpoint(minioProperties.getPublicEndpoint())
-        .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
-        .build();
-  }
 }

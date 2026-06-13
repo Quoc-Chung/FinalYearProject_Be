@@ -33,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @ConditionalOnBean(MinioClient.class)
 @Slf4j
+@RequiredArgsConstructor
 public class MinIoServiceImpl implements MinIoService {
 
   private static final long MAX_AVATAR_SIZE_BYTES = 5L * 1024 * 1024; // 5MB
@@ -57,15 +58,6 @@ public class MinIoServiceImpl implements MinIoService {
 
   private final MinioClient publicMinioClient;
 
-  public MinIoServiceImpl(
-      MinioClient minioClient,
-      @Qualifier("publicMinioClient") MinioClient publicMinioClient,
-      MinioProperties minioProperties
-  ) {
-    this.minioClient = minioClient;
-    this.publicMinioClient = publicMinioClient;
-    this.minioProperties = minioProperties;
-  }
   @PostConstruct
   public void initBucket() {
     try {
@@ -285,7 +277,8 @@ public class MinIoServiceImpl implements MinIoService {
     }
 
     try {
-      String presignedUrl = publicMinioClient.getPresignedObjectUrl(
+
+      String presignedUrl = minioClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
               .bucket(minioProperties.getBucketName())
               .object(objectKey)
@@ -295,6 +288,12 @@ public class MinIoServiceImpl implements MinIoService {
               .build()
       );
 
+
+      String internalEndpoint = minioProperties.getEndpoint();
+      String publicEndpoint = minioProperties.getPublicEndpoint();
+      if (publicEndpoint != null && !publicEndpoint.isBlank()) {
+        presignedUrl = presignedUrl.replace(internalEndpoint, publicEndpoint);
+      }
       return PresignedUrlResponse.builder()
           .presignedUrl(presignedUrl)
           .objectKey(objectKey)
