@@ -13,7 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 public interface AuthService {
   RegisterResponse register(RegisterRequest request);
 
-  AuthSessionResponse login(LoginRequest request, String deviceId);
+  AuthSessionResponse login(LoginRequest request, String deviceId, boolean checkLogin);
 
   AuthSessionResponse refreshToken(String refreshToken, String deviceId);
 

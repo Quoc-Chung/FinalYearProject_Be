@@ -9,7 +9,8 @@ services:
       - "8000:8000"
     environment:
       # Database
-      - DB_URL=jdbc:mysql://mysql:3306/techcycle_system?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Ho_Chi_Minh
+      - DB_URL=jdbc:mysql://mysql:3306/techcycle_system?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD}
       # Mail

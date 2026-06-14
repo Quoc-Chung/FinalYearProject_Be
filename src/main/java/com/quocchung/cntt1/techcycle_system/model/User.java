@@ -11,11 +11,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Entity
 @Table(name = "users"
 )
-@Getter
-@Setter
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
+@Data
 public class User {
 
   @Id
@@ -41,8 +40,9 @@ public class User {
   @Column(name = "avatar_url", length = 5000)
   private String avatarUrl;
 
-  @Column(name = "is_first_login", nullable = false)
-  private Boolean isFirstLogin;
+  @Column(name = "is_first_login", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 1")
+  @Builder.Default
+  private Integer isFirstLogin = 1;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)

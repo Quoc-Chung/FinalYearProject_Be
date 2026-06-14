@@ -30,7 +30,7 @@ public class Converter {
         .bio(user.getBio())
         .avatarUrl(user.getAvatarUrl())
         .status(user.getStatus() != null ? user.getStatus().name() : null)
-        .isFirstLogin(user.getIsFirstLogin())
+        .isFirstLogin(user.getIsFirstLogin() == 1 ? true : false)
         .trustScore(user.getTrustScore())
         .createdAt(user.getCreatedAt())
         .updatedAt(user.getUpdatedAt())

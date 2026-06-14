@@ -63,7 +63,7 @@ public class AuthController {
             .email(registerRequest.getEmail())
             .password(registerRequest.getPassword())
             .build(),
-        deviceId);
+        deviceId, false);
 
     ResponseCookie refreshCookie = ResponseCookie.from(authProperties.getRefreshCookieName(),
             session.getRefreshToken())
@@ -85,7 +85,7 @@ public class AuthController {
       @Valid @RequestBody LoginRequest loginRequest,
       @RequestHeader(value = DEVICE_HEADER, required = false) String deviceId
   ) {
-    AuthSessionResponse session = authService.login(loginRequest, deviceId);
+    AuthSessionResponse session = authService.login(loginRequest, deviceId, true);
     ResponseCookie refreshCookie = ResponseCookie.from(authProperties.getRefreshCookieName(),
             session.getRefreshToken())
         .httpOnly(true)

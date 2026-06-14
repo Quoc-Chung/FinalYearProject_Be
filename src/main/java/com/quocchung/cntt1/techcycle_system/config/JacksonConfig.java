@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+import java.util.TimeZone;
+
 @Configuration
 public class JacksonConfig {
 
@@ -19,6 +21,7 @@ public class JacksonConfig {
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         .addModule(new JavaTimeModule())
+        .defaultTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"))
         .build();
   }
 }

@@ -12,9 +12,6 @@ env:
   DOCKERHUB_IMAGE: quocchung/techcycle-backend
 
 jobs:
-  # ─────────────────────────────
-  # BUILD
-  # ─────────────────────────────
   build:
     name: Build & Test
     runs-on: ubuntu-latest
@@ -39,9 +36,6 @@ jobs:
           name: app-jar
           path: target/*.jar
 
-  # ─────────────────────────────
-  # DOCKER BUILD & PUSH
-  # ─────────────────────────────
   docker:
     name: Docker Build & Push
     runs-on: ubuntu-latest

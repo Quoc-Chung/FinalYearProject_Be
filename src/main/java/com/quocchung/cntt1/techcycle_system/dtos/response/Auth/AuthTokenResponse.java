@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 public class AuthTokenResponse {
   private String accessToken;
   private String tokenType;
-  private Boolean isFirstLogin;
   private Long expiresIn;
   private UserResponse user;
 }

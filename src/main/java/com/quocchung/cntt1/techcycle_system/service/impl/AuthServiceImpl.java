@@ -14,6 +14,7 @@ import com.quocchung.cntt1.techcycle_system.dtos.response.Auth.AuthSessionRespon
 import com.quocchung.cntt1.techcycle_system.dtos.response.Auth.AuthTokenResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Auth.LogoutResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Auth.RegisterResponse;
+import com.quocchung.cntt1.techcycle_system.dtos.response.User.UserResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.Role;
@@ -107,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
         .fullName(request.getFullName())
         .status(UserStatus.ACTIVE)
         .createdAt(LocalDateTime.now())
-        .isFirstLogin(true)
+        .isFirstLogin(1)
         .build();
     user = userRepository.save(user);
     Role role = roleRepository.findByName(DEFAULT_ROLE_NAME)
@@ -120,7 +121,7 @@ public class AuthServiceImpl implements AuthService {
         .userId(user.getUserId())
         .email(user.getEmail())
         .fullName(user.getFullName())
-        .isFirstRegister(true)
+        .isFirstRegister(user.getIsFirstLogin() == 1  ? true : false)
         .build();
   }
 
@@ -133,7 +134,7 @@ public class AuthServiceImpl implements AuthService {
    */
   @Override
   @Transactional
-  public AuthSessionResponse login(LoginRequest request, String deviceId) {
+  public AuthSessionResponse login(LoginRequest request, String deviceId, boolean checkLogin) {
     String email = request.getEmail().trim().toLowerCase();
 
     if (!userRepository.existsByEmail(email)) {
@@ -156,7 +157,7 @@ public class AuthServiceImpl implements AuthService {
       case DELETED -> throw new ResException(ResErrorCode.USER_DELETED, "Tài khoản đã bị xóa");
       case ACTIVE -> {}
     }
-    AuthSessionResponse session = issueSession(user, appNormalize.normalizeDeviceId(deviceId));
+    AuthSessionResponse session = issueSession(user, appNormalize.normalizeDeviceId(deviceId), checkLogin);
     return session;
   }
 
@@ -190,7 +191,7 @@ public class AuthServiceImpl implements AuthService {
       if (user.getStatus() != UserStatus.ACTIVE) {
         throw new ResException(ResErrorCode.USER_NOT_ACTIVE);
       }
-      return issueSession(user, tokenDeviceId);
+      return issueSession(user, tokenDeviceId, true);
     } catch (ResException ex) {
       throw ex;
     } catch (Exception ex) {
@@ -243,7 +244,7 @@ public class AuthServiceImpl implements AuthService {
 
     if (userId != null) {
       userRepository.findById(userId).ifPresent(user -> {
-        user.setIsFirstLogin(false);
+        user.setIsFirstLogin(0);
         userRepository.save(user);
       });
     }
@@ -466,8 +467,7 @@ public class AuthServiceImpl implements AuthService {
    * @param deviceId
    * @return
    */
-  private AuthSessionResponse issueSession(User user, String deviceId) {
-    boolean isFirstLogin = Boolean.TRUE.equals(user.getIsFirstLogin());
+  private AuthSessionResponse issueSession(User user, String deviceId, boolean consumeFirstLogin ) {
     Set<GrantedAuthority> grantedAuthorities = customUserDetailsService.buildAuthorities(
         user.getUserId());
     Set<String> authorities = grantedAuthorities.stream()
@@ -482,18 +482,28 @@ public class AuthServiceImpl implements AuthService {
 
     redisTokenService.saveRefreshToken(user.getUserId(), deviceId, refreshId,
         jwtService.getRefreshTokenExpirationMs());
-    if (Boolean.TRUE.equals(user.getIsFirstLogin())) {
-      user.setIsFirstLogin(false);
+
+    boolean wasFirstLogin = user.getIsFirstLogin() == 1 ? true : false;
+    log.info("CHUNG Was Firest Login: " + wasFirstLogin);
+
+    if (consumeFirstLogin) {
+      user.setIsFirstLogin(0);
     }
+
     user.setLastLoginAt(LocalDateTime.now());
+    UserResponse userResponse = converter.mapToUserResponse(user);
+    log.info("CHUNG Was Firest Login 1: " + userResponse.getIsFirstLogin());
+    userResponse.setIsFirstLogin(wasFirstLogin);
+    log.info("CHUNG Was Firest Login 2: " + userResponse.getIsFirstLogin());
     userRepository.save(user);
 
+    log.info("CHUNG Was Firest Login 3: " + userResponse.getIsFirstLogin());
+    log.info("CHUNG Was Firest Login 3: " + user.getIsFirstLogin());
     AuthTokenResponse tokenResponse = AuthTokenResponse.builder()
         .accessToken(accessToken)
         .tokenType("Bearer")
-        .isFirstLogin(isFirstLogin)
         .expiresIn(jwtService.getAccessTokenExpirationMs() / 1000)
-        .user(converter.mapToUserResponse(user))
+        .user(userResponse)
         .build();
 
     return AuthSessionResponse.builder()
@@ -717,7 +727,7 @@ public class AuthServiceImpl implements AuthService {
     if (user.getStatus() != UserStatus.ACTIVE) {
       throw new ResException(ResErrorCode.USER_NOT_ACTIVE);
     }
-    return issueSession(user, appNormalize.normalizeDeviceId(deviceId));
+    return issueSession(user, appNormalize.normalizeDeviceId(deviceId), true);
   }
 
   /**
@@ -736,7 +746,7 @@ public class AuthServiceImpl implements AuthService {
         .avatarUrl(avatarUrl)
         .status(UserStatus.ACTIVE)
         .createdAt(LocalDateTime.now())
-        .isFirstLogin(true)
+        .isFirstLogin(1)
         .build();
     newUser = userRepository.save(newUser);
     assignDefaultRole(newUser);
@@ -755,7 +765,6 @@ public class AuthServiceImpl implements AuthService {
       userRoleRepository.save(UserRole.builder().user(user).role(role).build());
     }
   }
-
   /**
    * resolve displayname
    *
