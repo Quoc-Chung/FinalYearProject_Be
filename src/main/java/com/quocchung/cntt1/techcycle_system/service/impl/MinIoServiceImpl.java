@@ -265,16 +265,23 @@ public class MinIoServiceImpl implements MinIoService {
     }
     return ".jpg";
   }
-
   @Override
   public PresignedUrlResponse generatePresignedPutUrl(String objectKey, String mimeType) {
     if (mimeType == null || !ALLOWED_PRESIGNED_MIME_TYPES.contains(mimeType.toLowerCase())) {
       throw new ResException(ResErrorCode.BAD_REQUEST, "mimeType",
           "Unsupported media type: " + mimeType);
     }
-
     try {
-      String presignedUrl = minioClient.getPresignedObjectUrl(
+      String publicEndpoint = minioProperties.getPublicEndpoint();
+      String publicDomain = publicEndpoint.replaceAll("/minio.*$", "");
+
+      MinioClient publicClient = MinioClient.builder()
+          .endpoint(publicDomain)
+          .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+          .build();
+      publicClient.ignoreCertCheck();
+
+      String presignedUrl = publicClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
               .bucket(minioProperties.getBucketName())
               .object(objectKey)
@@ -283,11 +290,7 @@ public class MinIoServiceImpl implements MinIoService {
               .extraHeaders(Map.of("Content-Type", mimeType))
               .build()
       );
-      String publicEndpoint = minioProperties.getPublicEndpoint();
-      String internalEndpoint = minioProperties.getEndpoint();
-      if (publicEndpoint != null && !publicEndpoint.isBlank()) {
-        presignedUrl = presignedUrl.replace(internalEndpoint, publicEndpoint);
-      }
+
       return PresignedUrlResponse.builder()
           .presignedUrl(presignedUrl)
           .objectKey(objectKey)
