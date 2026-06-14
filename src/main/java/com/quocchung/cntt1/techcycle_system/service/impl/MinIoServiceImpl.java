@@ -272,7 +272,13 @@ public class MinIoServiceImpl implements MinIoService {
           "Unsupported media type: " + mimeType);
     }
     try {
-      String presignedUrl = minioClient.getPresignedObjectUrl(
+      // Tạo client với public endpoint để ký signature đúng host
+      MinioClient publicMinioClient = MinioClient.builder()
+          .endpoint("https://techcycleit.duckdns.org")   // host public, không có path
+          .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+          .build();
+
+      String presignedUrl = publicMinioClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
               .bucket(minioProperties.getBucketName())
               .object(objectKey)
@@ -281,18 +287,9 @@ public class MinIoServiceImpl implements MinIoService {
               .extraQueryParams(Map.of("Content-Type", mimeType))
               .build()
       );
-      String internalEndpoint = minioProperties.getEndpoint();
-      String publicEndpoint = minioProperties.getPublicEndpoint();
-
-      String normalizedInternal = internalEndpoint.endsWith("/")
-          ? internalEndpoint.substring(0, internalEndpoint.length() - 1) : internalEndpoint;
-      String normalizedPublic = publicEndpoint.endsWith("/")
-          ? publicEndpoint.substring(0, publicEndpoint.length() - 1) : publicEndpoint;
-
-      String publicPresignedUrl = presignedUrl.replace(normalizedInternal, normalizedPublic);
 
       return PresignedUrlResponse.builder()
-          .presignedUrl(publicPresignedUrl)
+          .presignedUrl(presignedUrl)
           .objectKey(objectKey)
           .publicUrl(buildObjectUrl(objectKey))
           .expiresInSeconds(900L)
