@@ -27,7 +27,8 @@ services:
       # JWT
       - JWT_SECRET=${JWT_SECRET}
       # MinIO
-      - MINIO_ENDPOINT=http://minio:9000          # internal: để backend upload/delete
+      - MINIO_ENABLED=true
+      - MINIO_ENDPOINT=http://minio:9000          
       - MINIO_PUBLIC_ENDPOINT=https://techcycleit.duckdns.org/minio
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}

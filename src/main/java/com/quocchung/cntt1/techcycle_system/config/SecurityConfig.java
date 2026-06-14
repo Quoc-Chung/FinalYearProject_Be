@@ -72,7 +72,9 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/user/trust-score/**").permitAll()
             // Reactions - public (view reactions without login)
             .requestMatchers(HttpMethod.GET, "/api/reactions/post/**").permitAll()
-            // All other requests require authentication
+
+            .requestMatchers(HttpMethod.POST, "/api/media/presigned-url").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/media/presigned-url").permitAll()
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider())
