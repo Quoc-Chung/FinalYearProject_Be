@@ -467,7 +467,7 @@ public class AuthServiceImpl implements AuthService {
    * @return
    */
   private AuthSessionResponse issueSession(User user, String deviceId) {
-
+    boolean isFirstLogin = Boolean.TRUE.equals(user.getIsFirstLogin());
     Set<GrantedAuthority> grantedAuthorities = customUserDetailsService.buildAuthorities(
         user.getUserId());
     Set<String> authorities = grantedAuthorities.stream()
@@ -477,18 +477,21 @@ public class AuthServiceImpl implements AuthService {
         authorities);
 
     String refreshId = jwtService.newRefreshTokenId();
-    // create refresh token
     String refreshToken = jwtService.generateRefreshToken(user.getUserId(), user.getEmail(),
         deviceId, refreshId);
 
     redisTokenService.saveRefreshToken(user.getUserId(), deviceId, refreshId,
         jwtService.getRefreshTokenExpirationMs());
+    if (Boolean.TRUE.equals(user.getIsFirstLogin())) {
+      user.setIsFirstLogin(false);
+    }
     user.setLastLoginAt(LocalDateTime.now());
     userRepository.save(user);
 
     AuthTokenResponse tokenResponse = AuthTokenResponse.builder()
         .accessToken(accessToken)
         .tokenType("Bearer")
+        .isFirstLogin(isFirstLogin)
         .expiresIn(jwtService.getAccessTokenExpirationMs() / 1000)
         .user(converter.mapToUserResponse(user))
         .build();
