@@ -30,4 +30,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Optional<Transaction> findCompletedTransactionBetweenUsers(
         @Param("userId1") Long userId1,
         @Param("userId2") Long userId2);
+
+    @Query(value = "SELECT * FROM transactions t " +
+           "WHERE ((t.seller_id = :userId1 AND t.buyer_id = :userId2) " +
+           "   OR (t.seller_id = :userId2 AND t.buyer_id = :userId1)) " +
+           "   AND t.status = 'COMPLETED' " +
+           "ORDER BY t.created_at DESC LIMIT 1",
+           nativeQuery = true)
+    Optional<Transaction> findOneCompletedTransactionBetweenUsers(
+        @Param("userId1") Long userId1,
+        @Param("userId2") Long userId2);
 }

@@ -17,11 +17,10 @@ public class Permission {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer permissionId;
 
-  // API path: /api/users
+
   @Column(nullable = false, length = 100)
   private String resource;
 
-  // CREATE, READ, UPDATE, DELETE, ALL
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private Action action;

@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,8 +22,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  @ExceptionHandler(IncorrectResultSizeDataAccessException.class)
+  public ResponseEntity<ErrorResponse> handleIncorrectResultSize(
+      IncorrectResultSizeDataAccessException ex, HttpServletRequest request) {
+    log.error("IncorrectResultSizeDataAccessException: root cause={}", ex.getMostSpecificCause().getMessage(), ex);
+    log.error("Full stack trace:", ex);
+    Map<String, String> errors = new LinkedHashMap<>();
+    errors.put("error", "Dữ liệu trùng lặp: " + ex.getMostSpecificCause().getMessage());
+    return buildErrorResponse(ResErrorCode.GENERAL_ERROR, errors, request);
+  }
 
   @ExceptionHandler(ResException.class)
   public ResponseEntity<ErrorResponse> handleResException(ResException ex, HttpServletRequest request) {

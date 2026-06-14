@@ -38,11 +38,11 @@ public class TransactionController {
   @GetMapping("/my")
   public ResponseEntity<APIResponse<TransactionResponse>> getMyTransactions(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @RequestParam(defaultValue = "1") int page,
-      @RequestParam(defaultValue = "10") int size) {
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
     Page<TransactionResponse> result = transactionService.getMyTransactions(
         userPrincipal.getUserId(), page, size);
     return ResponseEntity.ok(
-        responseUtils.successPage(result.getContent(), page, result.getTotalElements(), size));
+        responseUtils.successPage(result.getContent(), result.getNumber() + 1, result.getTotalElements(), size));
   }
 }

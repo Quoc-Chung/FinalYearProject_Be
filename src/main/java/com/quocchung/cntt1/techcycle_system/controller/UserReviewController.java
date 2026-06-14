@@ -40,21 +40,21 @@ public class UserReviewController {
   @GetMapping("/me")
   public ResponseEntity<APIResponse<ReviewResponse>> getMyReviews(
       @AuthenticationPrincipal UserPrincipal userPrincipal,
-      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size) {
     Page<ReviewResponse> result = userReviewService.getReviews(userPrincipal.getUserId(), page, size);
     return ResponseEntity.ok(
-        responseUtils.successPage(result.getContent(), page, result.getTotalElements(), size));
+        responseUtils.successPage(result.getContent(), result.getNumber() + 1, result.getTotalElements(), size));
   }
 
   @GetMapping("/user/{userId}")
   public ResponseEntity<APIResponse<ReviewResponse>> getUserReviews(
       @PathVariable Long userId,
-      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size) {
     Page<ReviewResponse> result = userReviewService.getReviews(userId, page, size);
     return ResponseEntity.ok(
-        responseUtils.successPage(result.getContent(), page, result.getTotalElements(), size));
+        responseUtils.successPage(result.getContent(), result.getNumber() + 1, result.getTotalElements(), size));
   }
 
   @GetMapping("/has-transaction/{userId}")
@@ -65,4 +65,5 @@ public class UserReviewController {
         userPrincipal.getUserId(), userId);
     return ResponseEntity.ok(responseUtils.success(hasTransaction));
   }
+
 }

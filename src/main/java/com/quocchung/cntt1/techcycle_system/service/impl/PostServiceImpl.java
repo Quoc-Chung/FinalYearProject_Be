@@ -9,7 +9,6 @@ import com.quocchung.cntt1.techcycle_system.exception.ResException;
 import com.quocchung.cntt1.techcycle_system.model.Address;
 import com.quocchung.cntt1.techcycle_system.model.Brand;
 import com.quocchung.cntt1.techcycle_system.model.Category;
-import com.quocchung.cntt1.techcycle_system.model.Comment;
 import com.quocchung.cntt1.techcycle_system.model.Post;
 import com.quocchung.cntt1.techcycle_system.model.PostAttribute;
 import com.quocchung.cntt1.techcycle_system.model.PostImage;
@@ -71,6 +70,12 @@ public class PostServiceImpl implements PostService {
   private final NotificationService notificationService;
 
   private String buildPublicUrl(String objectKey) {
+    if (objectKey == null || objectKey.isBlank()) return objectKey;
+
+    if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) {
+      return objectKey;
+    }
+
     String base = minioProperties.getPublicEndpoint();
     if (base == null || base.isBlank()) {
       base = minioProperties.getEndpoint();
@@ -182,7 +187,7 @@ public class PostServiceImpl implements PostService {
         post.getPostTags().addAll(postTags);
       }
 
-      // Gửi thông báo cho tất cả admin khi có bài viết mới
+
       List<User> admins = userRepository.getAllAdmin();
       for (User admin : admins) {
         String title = "Bài viết mới cần duyệt";

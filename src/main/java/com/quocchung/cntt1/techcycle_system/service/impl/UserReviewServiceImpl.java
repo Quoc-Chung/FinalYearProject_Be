@@ -1,16 +1,21 @@
 package com.quocchung.cntt1.techcycle_system.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quocchung.cntt1.techcycle_system.dtos.request.Review.ReviewRequest;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Review.ReviewResponse;
 import com.quocchung.cntt1.techcycle_system.dtos.response.Review.UserSummaryResponse;
 import com.quocchung.cntt1.techcycle_system.exception.ResErrorCode;
 import com.quocchung.cntt1.techcycle_system.exception.ResException;
+import com.quocchung.cntt1.techcycle_system.model.Transaction;
 import com.quocchung.cntt1.techcycle_system.model.User;
 import com.quocchung.cntt1.techcycle_system.model.UserReview;
 import com.quocchung.cntt1.techcycle_system.repository.TransactionRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserRepository;
 import com.quocchung.cntt1.techcycle_system.repository.UserReviewRepository;
 import com.quocchung.cntt1.techcycle_system.service.UserReviewService;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,21 +31,56 @@ public class UserReviewServiceImpl implements UserReviewService {
   private final UserReviewRepository userReviewRepository;
   private final UserRepository userRepository;
   private final TransactionRepository transactionRepository;
+  private final ObjectMapper objectMapper;
 
+  private String tagsToJson(List<String> tags) {
+    if (tags == null || tags.isEmpty()) return "[]";
+    try {
+      return objectMapper.writeValueAsString(tags);
+    } catch (JsonProcessingException e) {
+      return "[]";
+    }
+  }
+
+  private List<String> jsonToTags(String json) {
+    if (json == null || json.isEmpty()) return List.of();
+    try {
+      return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+    } catch (JsonProcessingException e) {
+      return List.of();
+    }
+  }
   @Override
   @Transactional
   public ReviewResponse reviewUser(Long fromUserId, Long toUserId, ReviewRequest request) {
     if (fromUserId.equals(toUserId)) {
       throw new ResException(ResErrorCode.BAD_REQUEST, "Không thể tự đánh giá bản thân");
     }
-    if (!transactionRepository.existsCompletedTransactionBetweenUsers(fromUserId, toUserId)) {
-      throw new ResException(ResErrorCode.PERMISSION_DENIED,
-          "Chỉ có thể đánh giá người dùng khi đã có giao dịch hoàn tất với họ");
-    }
 
     User fromUser = getUserOrThrow(fromUserId);
     User toUser = getUserOrThrow(toUserId);
-    var transactionOpt = transactionRepository.findCompletedTransactionBetweenUsers(fromUserId, toUserId);
+
+    Transaction transaction = null;
+    if (request.getTransactionId() != null) {
+      transaction = transactionRepository.findById(request.getTransactionId())
+          .orElseThrow(() -> new ResException(ResErrorCode.BAD_REQUEST,
+              "Không tìm thấy giao dịch với id: " + request.getTransactionId()));
+
+      boolean isValidTransaction = (transaction.getSeller().getUserId().equals(fromUserId)
+          && transaction.getBuyer().getUserId().equals(toUserId))
+          || (transaction.getSeller().getUserId().equals(toUserId)
+          && transaction.getBuyer().getUserId().equals(fromUserId));
+
+      if (!isValidTransaction) {
+        throw new ResException(ResErrorCode.PERMISSION_DENIED,
+            "Giao dịch không hợp lệ giữa hai người dùng");
+      }
+
+      boolean isSeller = transaction.getSeller().getUserId().equals(fromUserId);
+      transaction.setSellerReviewed(isSeller ? true : transaction.getSellerReviewed());
+      transaction.setBuyerReviewed(isSeller ? transaction.getBuyerReviewed() : true);
+      transactionRepository.save(transaction);
+    }
 
     Optional<UserReview> existingReview = userReviewRepository.findByFromUserAndToUser(fromUser, toUser);
 
@@ -49,29 +89,31 @@ public class UserReviewServiceImpl implements UserReviewService {
     if (existingReview.isPresent()) {
       review = existingReview.get();
       review.setComment(request.getComment());
-      review.setTags(request.getTags());
-      if (review.getTransaction() == null && transactionOpt.isPresent()) {
-        review.setTransaction(transactionOpt.get());
+      review.setTags(tagsToJson(request.getTags()));
+      if (transaction != null) {
+        review.setTransaction(transaction);
       }
-
     } else {
       review = UserReview.builder()
           .fromUser(fromUser)
           .toUser(toUser)
           .rating(request.getRating())
           .comment(request.getComment())
-          .tags(request.getTags())
-          .transaction(transactionOpt.orElse(null))
+          .tags(tagsToJson(request.getTags()))
+          .transaction(transaction)
           .build();
     }
+
     userReviewRepository.save(review);
     recalculateTrustScore(toUser);
+
     return ReviewResponse.builder()
         .reviewId(review.getReviewId())
         .fromUser(toUserSummary(fromUser))
         .rating(review.getRating())
         .comment(review.getComment())
-        .tags(review.getTags())
+        .tags(jsonToTags(review.getTags()))
+        .transactionId(review.getTransaction() != null ? review.getTransaction().getTransactionId() : null)
         .createdAt(review.getCreatedAt() != null ? review.getCreatedAt().toString() : null)
         .updatedAt(review.getUpdatedAt() != null ? review.getUpdatedAt().toString() : null)
         .build();
@@ -81,7 +123,7 @@ public class UserReviewServiceImpl implements UserReviewService {
   public Page<ReviewResponse> getReviews(Long userId, int page, int size) {
     getUserOrThrow(userId);
 
-    Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+    Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending()); 
     Page<UserReview> reviews = userReviewRepository.findByToUserId(userId, pageable);
 
     return reviews.map(r -> ReviewResponse.builder()
@@ -89,7 +131,8 @@ public class UserReviewServiceImpl implements UserReviewService {
         .fromUser(toUserSummary(r.getFromUser()))
         .rating(r.getRating())
         .comment(r.getComment())
-        .tags(r.getTags())
+        .tags(jsonToTags(r.getTags()))
+        .transactionId(r.getTransaction() != null ? r.getTransaction().getTransactionId() : null)
         .createdAt(r.getCreatedAt() != null ? r.getCreatedAt().toString() : null)
         .updatedAt(r.getUpdatedAt() != null ? r.getUpdatedAt().toString() : null)
         .build());

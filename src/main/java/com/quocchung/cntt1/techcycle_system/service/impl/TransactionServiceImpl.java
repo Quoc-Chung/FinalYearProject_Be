@@ -85,7 +85,7 @@ public class TransactionServiceImpl implements TransactionService {
 
   @Override
   public Page<TransactionResponse> getMyTransactions(Long userId, int page, int size) {
-    Pageable pageable = PageRequest.of(page - 1, size);
+    Pageable pageable = PageRequest.of(page, size); // page đã 0-indexed từ controller
     Page<Transaction> transactions = transactionRepository
         .findBySellerUserIdOrBuyerUserIdOrderByCreatedAtDesc(userId, userId, pageable);
     return transactions.map(tx -> toTransactionResponse(tx, userId));
@@ -111,13 +111,13 @@ public class TransactionServiceImpl implements TransactionService {
     sellerData.put("buyerName", transaction.getBuyer().getFullName());
     sellerData.put("buyerAvatarUrl", transaction.getBuyer().getAvatarUrl());
     sellerData.put("role", "SELLER");
-    sellerData.put("canReview", !Boolean.TRUE.equals(transaction.getSellerReviewed()));
+    sellerData.put("canReview", false); // Người bán không đánh giá người mua
     notificationService.createNotification(
         transaction.getSeller(),
         transaction.getBuyer(),
         NotificationType.TRANSACTION_COMPLETED,
         "Bạn đã bán thành công!",
-        "Bài viết \"" + transaction.getPost().getTitle() + "\" đã được đánh dấu bán cho " + transaction.getBuyer().getFullName() + ". Hãy đánh giá người mua để cải thiện cộng đồng!",
+        "Bài viết \"" + transaction.getPost().getTitle() + "\" đã được đánh dấu bán cho " + transaction.getBuyer().getFullName() + ".",
         "/transactions",
         sellerData);
 
@@ -129,7 +129,7 @@ public class TransactionServiceImpl implements TransactionService {
     buyerData.put("sellerName", transaction.getSeller().getFullName());
     buyerData.put("sellerAvatarUrl", transaction.getSeller().getAvatarUrl());
     buyerData.put("role", "BUYER");
-    buyerData.put("canReview", !Boolean.TRUE.equals(transaction.getBuyerReviewed()));
+    buyerData.put("canReview", !Boolean.TRUE.equals(transaction.getBuyerReviewed())); // Chỉ người mua mới đánh giá người bán
     notificationService.createNotification(
         transaction.getBuyer(),
         transaction.getSeller(),

@@ -247,7 +247,6 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
       });
     }
-
     return LogoutResponse.builder()
         .message("Logged out successfully")
         .build();
