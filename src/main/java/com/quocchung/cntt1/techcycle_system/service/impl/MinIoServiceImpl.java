@@ -272,14 +272,7 @@ public class MinIoServiceImpl implements MinIoService {
           "Unsupported media type: " + mimeType);
     }
     try {
-      String publicEndpoint = minioProperties.getPublicEndpoint();
-
-      MinioClient publicClient = MinioClient.builder()
-          .endpoint(publicEndpoint)
-          .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
-          .build();
-
-      String presignedUrl = publicClient.getPresignedObjectUrl(
+      String presignedUrl = minioClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
               .bucket(minioProperties.getBucketName())
               .object(objectKey)
@@ -288,9 +281,18 @@ public class MinIoServiceImpl implements MinIoService {
               .extraQueryParams(Map.of("Content-Type", mimeType))
               .build()
       );
+      String internalEndpoint = minioProperties.getEndpoint();
+      String publicEndpoint = minioProperties.getPublicEndpoint();
+
+      String normalizedInternal = internalEndpoint.endsWith("/")
+          ? internalEndpoint.substring(0, internalEndpoint.length() - 1) : internalEndpoint;
+      String normalizedPublic = publicEndpoint.endsWith("/")
+          ? publicEndpoint.substring(0, publicEndpoint.length() - 1) : publicEndpoint;
+
+      String publicPresignedUrl = presignedUrl.replace(normalizedInternal, normalizedPublic);
 
       return PresignedUrlResponse.builder()
-          .presignedUrl(presignedUrl)
+          .presignedUrl(publicPresignedUrl)
           .objectKey(objectKey)
           .publicUrl(buildObjectUrl(objectKey))
           .expiresInSeconds(900L)
@@ -299,7 +301,8 @@ public class MinIoServiceImpl implements MinIoService {
     } catch (ResException ex) {
       throw ex;
     } catch (Exception ex) {
-      throw new ResException(ResErrorCode.GENERAL_ERROR, "Cannot generate presigned URL: " + ex.getMessage());
+      throw new ResException(ResErrorCode.GENERAL_ERROR,
+          "Cannot generate presigned URL: " + ex.getMessage());
     }
   }
 }
