@@ -55,9 +55,6 @@ public class MinIoServiceImpl implements MinIoService {
   private long postImageMaxSizeBytes;
   @Value("${minio.post-video-max-size-bytes:104857600}")
   private long postVideoMaxSizeBytes;
-
-  private final MinioClient publicMinioClient;
-
   @PostConstruct
   public void initBucket() {
     try {
@@ -286,6 +283,11 @@ public class MinIoServiceImpl implements MinIoService {
               .extraHeaders(Map.of("Content-Type", mimeType))
               .build()
       );
+      String publicEndpoint = minioProperties.getPublicEndpoint();
+      String internalEndpoint = minioProperties.getEndpoint();
+      if (publicEndpoint != null && !publicEndpoint.isBlank()) {
+        presignedUrl = presignedUrl.replace(internalEndpoint, publicEndpoint);
+      }
       return PresignedUrlResponse.builder()
           .presignedUrl(presignedUrl)
           .objectKey(objectKey)
@@ -296,7 +298,6 @@ public class MinIoServiceImpl implements MinIoService {
     } catch (ResException ex) {
       throw ex;
     } catch (Exception ex) {
-      log.error("Failed to generate presigned URL for objectKey={}: {}", objectKey, ex.getMessage());
       throw new ResException(ResErrorCode.GENERAL_ERROR, "Cannot generate presigned URL");
     }
   }
