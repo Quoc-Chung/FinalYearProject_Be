@@ -274,8 +274,9 @@ public class MinIoServiceImpl implements MinIoService {
     try {
       // Tạo client với public endpoint để ký signature đúng host
       MinioClient publicMinioClient = MinioClient.builder()
-          .endpoint("https://techcycleit.duckdns.org")   // host public, không có path
+          .endpoint(minioProperties.getPublicEndpoint())  // https://techcycleit.duckdns.org
           .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+          .region("us-east-1")  // <-- thêm dòng này
           .build();
 
       String presignedUrl = publicMinioClient.getPresignedObjectUrl(
