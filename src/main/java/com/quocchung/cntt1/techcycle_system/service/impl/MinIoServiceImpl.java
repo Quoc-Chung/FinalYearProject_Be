@@ -273,13 +273,11 @@ public class MinIoServiceImpl implements MinIoService {
     }
     try {
       String publicEndpoint = minioProperties.getPublicEndpoint();
-      String publicDomain = publicEndpoint.replaceAll("/minio.*$", "");
 
       MinioClient publicClient = MinioClient.builder()
-          .endpoint(publicDomain)
+          .endpoint(publicEndpoint)
           .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
           .build();
-      publicClient.ignoreCertCheck();
 
       String presignedUrl = publicClient.getPresignedObjectUrl(
           GetPresignedObjectUrlArgs.builder()
@@ -287,7 +285,7 @@ public class MinIoServiceImpl implements MinIoService {
               .object(objectKey)
               .method(Method.PUT)
               .expiry(15, TimeUnit.MINUTES)
-              .extraHeaders(Map.of("Content-Type", mimeType))
+              .extraQueryParams(Map.of("Content-Type", mimeType))
               .build()
       );
 
@@ -301,7 +299,7 @@ public class MinIoServiceImpl implements MinIoService {
     } catch (ResException ex) {
       throw ex;
     } catch (Exception ex) {
-      throw new ResException(ResErrorCode.GENERAL_ERROR, "Cannot generate presigned URL");
+      throw new ResException(ResErrorCode.GENERAL_ERROR, "Cannot generate presigned URL: " + ex.getMessage());
     }
   }
 }
