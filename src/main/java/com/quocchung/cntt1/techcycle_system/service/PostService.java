@@ -36,6 +36,7 @@ public interface PostService {
       Double minPrice,
       Double maxPrice,
       String tag,
+      PostStatus status,
       Pageable pageable
   );
 

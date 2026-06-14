@@ -404,6 +404,7 @@ public class PostServiceImpl implements PostService {
       Double minPrice,
       Double maxPrice,
       String tag,
+      PostStatus status,
       Pageable pageable
   ) {
     Specification<Post> spec = Specification.where(null);
@@ -460,6 +461,11 @@ public class PostServiceImpl implements PostService {
     if (tag != null && !tag.isBlank()) {
       spec = spec.and(PostSpecifications.hasTag(tag));
     }
+
+    if (status != null) {
+      spec = spec.and(PostSpecifications.hasStatus(status));
+    }
+
     return postRepository.findAll(spec, pageable).map(this::mapToResponse);
   }
 

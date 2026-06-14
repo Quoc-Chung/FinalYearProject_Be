@@ -116,6 +116,7 @@ public class PostController {
       @RequestParam(required = false) Double minPrice,
       @RequestParam(required = false) Double maxPrice,
       @RequestParam(required = false) String tag,
+      @RequestParam(required = false) PostStatus status,
       @RequestParam(defaultValue = "1") int page,
       @RequestParam(defaultValue = "10") int size
   ) {
@@ -123,7 +124,7 @@ public class PostController {
     Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
     Page<PostResponse> result = postService.searchPosts(
         keyword, title, description, authorName, address, province, ward,
-        categoryId, brandId, minPrice, maxPrice, tag, pageable);
+        categoryId, brandId, minPrice, maxPrice, tag, status, pageable);
     return ResponseEntity.ok(responseUtils.successPage(
         result.getContent(), result.getNumber() + 1, result.getTotalElements(), result.getSize()));
   }
