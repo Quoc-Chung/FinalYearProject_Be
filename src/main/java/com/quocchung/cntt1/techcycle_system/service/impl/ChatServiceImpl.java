@@ -238,9 +238,11 @@ public class ChatServiceImpl implements ChatService {
     return ChatMessageResponse.fromEntityWithAttachments(message, attachments);
   }
 
-  private void sendChatNotification(Conversation conversation, User sender, Message message) {
+    private void sendChatNotification(Conversation conversation, User sender, Message message) {
     List<ConversationParticipant> participants = participantRepository
         .findByConversationIdWithUser(conversation.getConversationId());
+
+    boolean isAdminSender = userRepository.hasRole(sender.getUserId(), "ADMIN");
 
     Map<String, Object> data = Map.of(
         "conversationId", conversation.getConversationId(),
@@ -249,6 +251,11 @@ public class ChatServiceImpl implements ChatService {
 
     for (ConversationParticipant participant : participants) {
       if (participant.getUser().getUserId().equals(sender.getUserId())) {
+        continue;
+      }
+
+      // Skip notification for admin if sender is also admin (avoid notification spam to admin)
+      if (isAdminSender && userRepository.hasRole(participant.getUser().getUserId(), "ADMIN")) {
         continue;
       }
 

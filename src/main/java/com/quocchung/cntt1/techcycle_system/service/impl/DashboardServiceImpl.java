@@ -5,7 +5,6 @@ import com.quocchung.cntt1.techcycle_system.model.*;
 import com.quocchung.cntt1.techcycle_system.repository.*;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import com.quocchung.cntt1.techcycle_system.utils.enums.ReportStatus;
-import com.quocchung.cntt1.techcycle_system.utils.enums.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -204,8 +203,6 @@ public class DashboardServiceImpl implements com.quocchung.cntt1.techcycle_syste
 
         return categoryStats;
     }
-
-    // ========== RECENT POSTS ==========
 
     @Override
     public List<RecentPostResponse> getRecentPosts(int limit) {

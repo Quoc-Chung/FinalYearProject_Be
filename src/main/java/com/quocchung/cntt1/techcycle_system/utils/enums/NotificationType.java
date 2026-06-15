@@ -21,5 +21,10 @@ public enum NotificationType {
   USER_REPORT, // Báo cáo người dùng vi phạm
   ABUSE_DETECTED, // Phát hiện nội dung bất thường (AI)
   SYSTEM, // Thông báo hệ thống
-  TRANSACTION_COMPLETED // Giao dịch hoàn tất - click để đánh giá người bán/người mua
+  TRANSACTION_COMPLETED, // Giao dịch hoàn tất - click để đánh giá người bán/người mua
+
+  // Appeal (Khiếu nại)
+  APPEAL_SUBMITTED, // Người dùng gửi khiếu nại
+  APPEAL_APPROVED, // Khiếu nại được chấp nhận - bài viết được duyệt lại
+  APPEAL_REJECTED  // Khiếu nại bị từ chối - bài viết vẫn vi phạm
 }

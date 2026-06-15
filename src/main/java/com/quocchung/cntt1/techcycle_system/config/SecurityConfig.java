@@ -75,6 +75,8 @@ public class SecurityConfig {
 
             .requestMatchers(HttpMethod.POST, "/api/media/presigned-url").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/media/presigned-url").permitAll()
+            .requestMatchers("/api/appeals/**").authenticated()
+
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider())
