@@ -187,6 +187,14 @@ public class ReportServiceImpl implements ReportService {
   }
 
   @Override
+  public boolean checkUserReportedPost(Long postId, Long userId) {
+    if (userId == null) {
+      return false;
+    }
+    return postReportRepository.existsByPostPostIdAndReporterUserId(postId, userId);
+  }
+
+  @Override
   public FullReportResponse getFullReport() {
     Long totalUsers = dashboardRepository.countTotalUsers();
     Long totalPosts = dashboardRepository.countTotalPosts();

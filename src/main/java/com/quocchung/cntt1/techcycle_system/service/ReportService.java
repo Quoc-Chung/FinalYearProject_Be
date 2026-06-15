@@ -24,6 +24,8 @@ public interface ReportService {
 
   void resolvePostReports(Long postId, Long adminId, boolean isViolation);
 
+  boolean checkUserReportedPost(Long postId, Long userId);
+
   FullReportResponse getFullReport();
 
   Page<UserReportStatsResponse> getUserReportStats(String searchText, int page, int size);

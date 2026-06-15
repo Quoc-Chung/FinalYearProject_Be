@@ -1,8 +1,10 @@
 package com.quocchung.cntt1.techcycle_system.repository;
 
+import com.quocchung.cntt1.techcycle_system.model.Address;
 import com.quocchung.cntt1.techcycle_system.model.Post;
 import com.quocchung.cntt1.techcycle_system.utils.enums.PostStatus;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -55,40 +57,38 @@ public class PostSpecifications {
 
   public static Specification<Post> hasAuthorFullName(String authorName) {
     return (root, query, cb) -> {
-      if (authorName == null || authorName.isBlank()) {
-        return cb.conjunction();
-      }
-      Join<Object, Object> userJoin = root.join("user");
+      if (authorName == null || authorName.isBlank()) return cb.conjunction();
+      Join<Object, Object> userJoin = root.join("user", JoinType.LEFT);
       return cb.like(cb.lower(userJoin.get("fullName")), "%" + authorName.toLowerCase() + "%");
     };
   }
 
   public static Specification<Post> hasAddressLine(String address) {
     return (root, query, cb) -> {
-      if (address == null || address.isBlank()) {
-        return cb.conjunction();
-      }
-      Join<Object, Object> addressJoin = root.join("address");
-      return cb.like(cb.lower(addressJoin.get("addressLine")), "%" + address.toLowerCase() + "%");
+      if (address == null || address.isBlank()) return cb.conjunction();
+      Join<Post, Address> addressJoin = root.join("address", JoinType.LEFT);
+      String pattern = "%" + address.toLowerCase() + "%";
+      return cb.or(
+          cb.like(cb.lower(addressJoin.get("addressLine")), pattern),
+          cb.like(cb.lower(addressJoin.get("addressDetail")), pattern),
+          cb.like(cb.lower(addressJoin.get("province")), pattern),
+          cb.like(cb.lower(addressJoin.get("ward")), pattern)
+      );
     };
   }
 
   public static Specification<Post> hasProvince(String province) {
     return (root, query, cb) -> {
-      if (province == null || province.isBlank()) {
-        return cb.conjunction();
-      }
-      Join<Object, Object> addressJoin = root.join("address");
+      if (province == null || province.isBlank()) return cb.conjunction();
+      Join<Object, Object> addressJoin = root.join("address", JoinType.LEFT);
       return cb.like(cb.lower(addressJoin.get("province")), "%" + province.toLowerCase() + "%");
     };
   }
 
   public static Specification<Post> hasWard(String ward) {
     return (root, query, cb) -> {
-      if (ward == null || ward.isBlank()) {
-        return cb.conjunction();
-      }
-      Join<Object, Object> addressJoin = root.join("address");
+      if (ward == null || ward.isBlank()) return cb.conjunction();
+      Join<Object, Object> addressJoin = root.join("address", JoinType.LEFT);
       return cb.like(cb.lower(addressJoin.get("ward")), "%" + ward.toLowerCase() + "%");
     };
   }

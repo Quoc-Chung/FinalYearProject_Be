@@ -46,6 +46,14 @@ public class ReportController {
     return ResponseEntity.ok(responseUtils.success(result));
   }
 
+  @GetMapping("/post/{postId}/check")
+  public ResponseEntity<APIResponse<Boolean>> checkUserReported(
+      @PathVariable Long postId,
+      @AuthenticationPrincipal UserPrincipal userPrincipal) {
+    boolean reported = reportService.checkUserReportedPost(postId, userPrincipal.getUserId());
+    return ResponseEntity.ok(responseUtils.success(reported));
+  }
+
   @PutMapping("/posts/{postId}/resolve")
   @PreAuthorize("hasAnyRole('ADMIN')")
   public ResponseEntity<APIResponse<Void>> resolvePostReports(
