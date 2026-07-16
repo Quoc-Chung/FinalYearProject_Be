@@ -83,9 +83,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─────────────────────────────
-  # DEPLOY (FIXED)
-  # ─────────────────────────────
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
@@ -103,25 +100,25 @@ jobs:
           script: |
             set -e
 
-            echo "➡️ Move to project folder"
+            echo "Move to project folder"
             cd ~/techcycle
 
-            echo "➡️ Pull latest image"
+            echo "Pull latest image"
             docker pull quocchung/techcycle-backend:latest
 
-            echo "➡️ Stop old container (safe)"
+            echo "Stop old container (safe)"
             docker-compose down --remove-orphans || true
 
-            echo "➡️ Remove dangling containers"
+            echo "Remove dangling containers"
             docker rm -f techcycle-backend || true
 
-            echo "➡️ Start new container"
+            echo "Start new container"
             docker-compose up -d --force-recreate
 
-            echo "➡️ Cleanup images"
+            echo "Cleanup images"
             docker image prune -f
 
-            echo "➡️ Show running containers"
+            echo "Show running containers"
             docker ps
 
-            echo "✅ Deploy SUCCESS"
+            echo "Deploy SUCCESS"
